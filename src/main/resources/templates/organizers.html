@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Организаторы — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <div class="brand">
+            <div class="logo"></div>
+            <h1>Кадр — интернет-афиша</h1>
+        </div>
+        <nav>
+            <a th:href="@{/}">Главная</a>
+            <a th:href="@{/events}" aria-disabled="true">События</a>
+            <a th:href="@{/organizers}" aria-disabled="true">Организаторы</a>
+            <a th:href="@{/about}" aria-disabled="true">О проекте</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <section>
+        <div class="breadcrumbs">
+            <a th:href="@{/}">Главная</a>
+            <span>›</span>
+            <span class="muted">Организаторы</span>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>Организаторы</h2>
+            <form th:action="@{/organizers}" method="get" style="display:flex;gap:8px;align-items:center">
+                <input type="text" name="q" th:value="${q}"
+                       placeholder="Поиск по названию…" aria-label="Поиск"
+                       style="background:var(--card);border:1px solid var(--border);color:var(--text);
+                      padding:8px 10px;border-radius:10px;min-width:240px;">
+                <button class="btn" type="submit">Найти</button>
+            </form>
+        </div>
+
+        <div class="grid cards" th:if="${!#lists.isEmpty(page.content)}">
+            <div class="card" th:each="o : ${page.content}">
+                <div class="event-head">
+                    <h3 class="event-title" th:text="${o.organizationName}">Название организации</h3>
+                    <span class="chip" th:text="${o.user != null ? ('#' + o.user.id) : '—'}">#1</span>
+                </div>
+
+                <div class="row">
+                    <span class="muted">Контакты: </span>
+                    <a class="link" th:href="${'mailto:' + o.contactEmail}" th:text="${o.contactEmail}">mail@example.com</a>
+                </div>
+
+                <div class="row" style="justify-content:space-between">
+                    <a class="link" th:href="@{'/events'(organizerId=${o.id})}">События организатора →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="muted" th:if="${#lists.isEmpty(page.content)}">
+            Организаторов не найдено.
+        </div>
+    </section>
+
+    <section th:if="${page.totalPages > 1}">
+        <div class="row" style="justify-content:center;gap:8px;margin-top:16px">
+            <a class="link"
+               th:if="${!page.first}"
+               th:href="@{/organizers(page=${page.number - 1}, size=${page.size}, q=${q})}">← Предыдущая</a>
+
+            <span class="chip">
+        Стр. <span th:text="${page.number + 1}">1</span> / <span th:text="${page.totalPages}">1</span>
+      </span>
+
+            <a class="link"
+               th:if="${!page.last}"
+               th:href="@{/organizers(page=${page.number + 1}, size=${page.size}, q=${q})}">Следующая →</a>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <div class="wrap">
+        <p class="muted">© Кадр, <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span></p>
+    </div>
+</footer>
+</body>
+</html>

@@ -1,10 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Кадр — интернет-афиша</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+<header>
+    <div class="wrap">
+        <div class="brand">
+            <div class="logo"></div>
+            <h1>Кадр — интернет-афиша</h1>
+        </div>
+        <nav>
+            <a th:href="@{/}">Главная</a>
+            <a th:href="@{/events}" aria-disabled="true">События</a>
+            <a th:href="@{/organizers}" aria-disabled="true">Организаторы</a>
+            <a th:href="@{/about}" aria-disabled="true">О проекте</a>
+        </nav>
+    </div>
+</header>
 
+<main class="wrap">
+
+    <section>
+        <div class="section-title">
+            <h2>Подборки по типам</h2>
+        </div>
+
+        <div class="grid types">
+            <a class="card linkable"
+               th:each="t : ${types}"
+               th:href="@{/events(typeId=${t.id})}"
+               th:aria-label="${'События типа: ' + t.title}">
+                <div class="pill" th:text="${t.title}">Концерты</div>
+                <p class="muted" style="margin:10px 0 0 0" th:text="${t.description} ?: '—'">Описание</p>
+            </a>
+
+            <div class="muted" th:if="${#lists.isEmpty(types)}">Нет типов событий.</div>
+        </div>
+    </section>
+    <section>
+        <div class="section-title">
+            <h2>Ближайшие события</h2>
+        </div>
+        <div class="grid cards">
+            <div class="card" th:each="e : ${events}">
+                <div class="event-head">
+                    <h3 class="event-title" th:text="${e.title}">Название события</h3>
+                    <div th:if="${e.rating != null}">
+                        <span title="Рейтинг">★</span>
+                        <span th:text="${#numbers.formatDecimal(e.rating,1,1)}">4.5</span>
+                    </div>
+                </div>
+                <p class="muted" th:text="${e.description}">Краткое описание…</p>
+                <div class="row">
+                    <span class="chip">
+                      <a class="link" th:href="@{/events(typeId=${e.eventType.id})}"
+                         th:text="${e.eventType != null ? e.eventType.title : 'Тип'}">Тип</a>
+                    </span>
+                    <span th:text="${#temporals.format(e.eventDatetime,'dd MMM yyyy, HH:mm')}">12 окт 2025, 19:00</span>
+                </div>
+                <div class="row" th:if="${e.address != null}">
+                    <span th:text="${e.address.city + ', ' + e.address.street}">Город, Улица</span>
+                </div>
+                <div class="row">
+                    <a class="link" th:href="@{/events/{id}(id=${e.id})}">Подробнее →</a>
+                </div>
+            </div>
+            <div class="muted" th:if="${#lists.isEmpty(events)}">Скоро появятся новые события.</div>
+        </div>
+    </section>
+    <section>
+        <div class="section-title">
+            <h2>Отзывы пользователей</h2>
+        </div>
+        <div class="grid cards">
+            <div class="card" th:each="r : ${reviews}">
+                <div class="event-head">
+                    <div>
+                        <div title="Оценка">★★★★★</div>
+                        <div class="muted" style="font-size:13px">
+                            к событию <a class="link" th:href="@{/events/{id}(id=${r.event.id})}"
+                                         th:text="${r.event.title}">Название события</a>
+                        </div>
+                    </div>
+                    <div class="muted" th:text="${#temporals.format(r.createdAt,'dd MMM yyyy')}">10 окт 2025</div>
+                </div>
+                <p th:text="${r.body}">Очень понравилось!</p>
+                <div class="row">
+                    <span class="chip" th:text="${r.user != null ? '#' + r.user.id : 'Гость'}">Гость</span>
+                </div>
+            </div>
+            <div class="muted" th:if="${#lists.isEmpty(reviews)}">Пока нет отзывов с оценкой 5.</div>
+        </div>
+    </section>
+</main>
+<footer>
+    <div class="wrap">
+        <p class="muted">© Кадр, <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span></p>
+    </div>
+</footer>
 </body>
 </html>

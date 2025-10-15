@@ -32,4 +32,5 @@ public class Organizer {
     @Size(max = 320)
     @Column(name = "contact_email", nullable = false, length = 320)
     private String contactEmail;
+
 }

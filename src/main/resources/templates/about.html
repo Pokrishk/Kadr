@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>О проекте — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <div class="brand">
+            <div class="logo"></div>
+            <h1>Кадр — интернет-афиша</h1>
+        </div>
+        <nav>
+            <a th:href="@{/}">Главная</a>
+            <a th:href="@{/events}" aria-disabled="true">События</a>
+            <a th:href="@{/organizers}" aria-disabled="true">Организаторы</a>
+            <a th:href="@{/about}" aria-disabled="true">О проекте</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+    <section>
+        <div class="breadcrumbs">
+            <a th:href="@{/}">Главная</a>
+            <span>›</span>
+            <span class="muted">О проекте</span>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>Зачем «Кадр»?</h2>
+        </div>
+        <div class="card">
+            <p class="muted">
+                «Кадр» — это интернет-афиша, которая помогает быстро находить интересные события,
+                покупать билеты и читать живые отзывы. Мы показываем подборки по типам событий,
+                ближайшие мероприятия и лучшие комментарии.
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>Каков функционал?</h2>
+        </div>
+        <div class="grid cards">
+            <div class="card">
+                <h3 class="event-title">Случайные типы событий</h3>
+                <p class="muted">На главной — компактные подборки категорий, обновляются при каждом заходе.</p>
+            </div>
+            <div class="card">
+                <h3 class="event-title">Ближайшие события</h3>
+                <p class="muted">Показываем мероприятия по дате, с рейтингом и быстрым переходом к деталям.</p>
+            </div>
+            <div class="card">
+                <h3 class="event-title">Отзывы 5★</h3>
+                <p class="muted">Выводим свежие позитивные комментарии с привязкой к событиям.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>Технологии</h2>
+        </div>
+        <div class="card">
+            <div class="row" style="flex-wrap:wrap">
+                <span class="chip">Spring Boot 3</span>
+                <span class="chip">Spring Data JPA</span>
+                <span class="chip">Hibernate</span>
+                <span class="chip">Thymeleaf</span>
+                <span class="chip">PostgreSQL</span>
+                <span class="chip">Spring Security</span>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>FAQ</h2>
+        </div>
+        <div class="grid cards">
+            <div class="card">
+                <h3 class="event-title">Откуда берутся события?</h3>
+                <p class="muted">Мероприятия добавляют организаторы, мы проверяем корректность данных.</p>
+            </div>
+            <div class="card">
+                <h3 class="event-title">Как считается рейтинг?</h3>
+                <p class="muted">Рейтинг формируется по отзывам пользователей и модерации.</p>
+            </div>
+            <div class="card">
+                <h3 class="event-title">Можно ли стать организатором?</h3>
+                <p class="muted">Да. Зарегистрируйтесь и подайте заявку. Администратор её проверит и назначит вас организатором.</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-title">
+            <h2>Контакты</h2>
+        </div>
+        <div class="card">
+            <p class="muted">Почта проекта: <a class="link" href="mailto:support@kadr.app">support@kadr.app</a></p>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <p class="muted">© Кадр, <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span></p>
+    </div>
+</footer>
+</body>
+</html>
