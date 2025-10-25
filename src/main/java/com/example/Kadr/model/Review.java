@@ -30,6 +30,7 @@ public class Review {
     private Integer rating;
 
     @NotBlank
+    @Size(max = 1000) // ← добавили серверный лимит текста
     @Column(name = "body", nullable = false, columnDefinition = "text")
     private String body;
 
@@ -49,5 +50,6 @@ public class Review {
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
+        if (body != null) body = body.trim();
     }
 }

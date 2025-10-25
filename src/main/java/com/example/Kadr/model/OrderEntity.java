@@ -9,13 +9,11 @@ import java.util.*;
 
 @Entity
 @Table(name = "orders", indexes = {
-        @Index(name = "idx_orders_user", columnList = "user_id")
+        @Index(name = "idx_orders_user", columnList = "user_id"),
+        @Index(name = "idx_orders_created", columnList = "created_at")
 })
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class OrderEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,6 +33,7 @@ public class OrderEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Builder.Default
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Заказы</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="wrap">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+    <section class="card">
+        <h2>Мои заказы</h2>
+        <div th:if="${#lists.isEmpty(orders)}">
+            <p>У вас пока нет заказов. <a th:href="@{/events}">Перейдите к событиям</a>!</p>
+        </div>
+
+        <div th:each="order : ${orders}">
+            <div class="card" style="margin-top:14px;">
+                <h3>Заказ №<span th:text="${order.id}"></span></h3>
+                <p>Дата: <span th:text="${#temporals.format(order.createdAt, 'dd.MM.yyyy HH:mm')}"></span></p>
+                <p>Сумма: <span th:text="${order.totalSum}"></span> ₽</p>
+                <ul>
+                    <li th:each="item : ${order.items}">
+                        <span th:text="${item.ticket.event.title}"></span> —
+                        <span th:text="${item.quantity}"></span> шт.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer><div class="wrap">© Кадр</div></footer>
+</body>
+</html>

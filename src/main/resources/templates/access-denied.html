@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>403 — Доступ запрещён — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+</head>
+<body>
+
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="wrap">
+    <section>
+        <div class="breadcrumbs">
+            <a th:href="@{/}">Главная</a>
+            <span>›</span>
+            <span class="muted">Доступ запрещён</span>
+        </div>
+    </section>
+
+    <section class="card" style="max-width:860px; margin:28px auto;">
+        <div class="section-title">
+            <h2>🚫 Доступ запрещён (403)</h2>
+            <span class="muted">У вас нет прав для просмотра этой страницы</span>
+        </div>
+
+        <p class="muted" style="margin-top:10px">
+            Если вы считаете, что это ошибка, обратитесь к администратору или попробуйте войти под другим аккаунтом.
+        </p>
+
+        <div class="card" style="margin-top:14px;">
+            <div class="row" sec:authorize="isAuthenticated()">
+                <span class="chip">Вы вошли как</span>
+                <strong sec:authentication="name">user</strong>
+            </div>
+            <div class="row" sec:authorize="isAuthenticated()">
+                <span class="chip">Ваши роли</span>
+                <span sec:authentication="principal.authorities">ROLE_USER</span>
+            </div>
+
+            <div class="row" sec:authorize="isAnonymous()">
+                <span class="chip">Вы не авторизованы</span>
+                <span class="muted">Войдите или зарегистрируйтесь, чтобы получить доступ</span>
+            </div>
+        </div>
+
+        <div class="row" style="flex-wrap:wrap; gap:8px; margin-top:16px">
+            <a class="btn" th:href="@{/}">← На главную</a>
+
+            <a class="link" sec:authorize="isAnonymous()" th:href="@{/login}">Войти</a>
+            <a class="link" sec:authorize="isAnonymous()" th:href="@{/register}">Регистрация</a>
+
+        </div>
+
+        <div class="row" style="margin-top:10px">
+      <span class="muted">
+        Нужна роль организатора или администратора для доступа к этой странице?
+        Свяжитесь с админом проекта.
+      </span>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <p class="muted">© Кадр, <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span></p>
+    </div>
+</footer>
+
+</body>
+</html>

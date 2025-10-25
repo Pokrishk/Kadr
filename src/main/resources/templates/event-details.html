@@ -1,3 +1,4 @@
+<!-- src/main/resources/templates/event-details.html -->
 <!DOCTYPE html>
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -5,24 +6,13 @@
     <title th:text="${event.title} + ' — Кадр'">Кадр — событие</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
 </head>
 <body>
-<header>
-    <div class="wrap">
-        <div class="brand">
-            <div class="logo"></div>
-            <h1>Кадр — интернет-афиша</h1>
-        </div>
-        <nav>
-            <a th:href="@{/}">Главная</a>
-            <a th:href="@{/events}" aria-disabled="true">События</a>
-            <a th:href="@{/organizers}" aria-disabled="true">Организаторы</a>
-            <a th:href="@{/about}" aria-disabled="true">О проекте</a>
-        </nav>
-    </div>
-</header>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
 
 <main class="wrap">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
     <div class="breadcrumbs">
         <a th:href="@{/}">Главная</a> ›
         <a th:if="${event.eventType != null}"
@@ -40,8 +30,8 @@
                 <span class="chip" th:text="${event.eventType != null ? event.eventType.title : 'Тип'}">Тип</span>
                 <span th:text="${#temporals.format(event.eventDatetime,'dd MMM yyyy, HH:mm')}">12 окт 2025, 19:00</span>
                 <span th:if="${event.rating != null}">
-          · ★ <span th:text="${#numbers.formatDecimal(event.rating,1,1)}">4.8</span>
-        </span>
+                    · ★ <span th:text="${#numbers.formatDecimal(event.rating,1,1)}">4.8</span>
+                </span>
             </div>
         </div>
 
@@ -60,8 +50,37 @@
                 <strong>Билетов всего:</strong>
                 <span th:text="${event.ticketsTotal}">0</span>
             </div>
+
             <div class="row" style="margin-top:10px">
-                <a class="btn" href="#" aria-disabled="true">Купить билет</a>
+                <div th:if="${#lists.isEmpty(tickets)}" class="muted">Билеты недоступны.</div>
+
+                <div th:if="${!#lists.isEmpty(tickets)}">
+                    <form th:action="@{/cart/add}" method="post" class="ui-form-inline">
+                        <label class="ui-field">
+                            <span class="ui-label">Билет</span>
+                            <select class="ui-input" name="ticketId" required>
+                                <option th:each="t : ${tickets}"
+                                        th:value="${t.id}"
+                                        th:text="${(#strings.isEmpty(t.seat) ? 'Обычный' : 'Место ' + t.seat) + ' — ' + #numbers.formatDecimal(t.price,1,2) + ' ₽'}"
+                                        th:selected="${cartForm != null and cartForm.ticketId != null and cartForm.ticketId == t.id}">
+                                </option>
+                            </select>
+                        </label>
+                        <label class="ui-field ui-field--narrow">
+                            <span class="ui-label">Кол-во</span>
+                            <input class="ui-input"
+                                   type="number" name="quantity" min="1"
+                                   th:value="${cartForm != null && cartForm.quantity != null ? cartForm.quantity : 1}">
+                        </label>
+                        <div class="ui-actions">
+                            <button class="btn" type="submit">В корзину</button>
+                        </div>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    </form>
+                    <div th:if="${#authorization?.expression('!isAuthenticated()')}" class="muted" style="margin-top:8px">
+                        Чтобы купить билет, <a th:href="@{/login}" class="link">войдите</a>.
+                    </div>
+                </div>
             </div>
         </aside>
     </section>
@@ -83,15 +102,57 @@
                     </div>
                     <span class="chip"
                           th:text="${r.user != null
-                ? ( !#strings.isEmpty(r.user.username) ? r.user.username
-                    : ( !#strings.isEmpty(r.user.email) ? r.user.email
-                        : '#' + r.user.id ) )
-                : 'Гость'}">Гость</span>
+                                ? ( !#strings.isEmpty(r.user.username) ? r.user.username
+                                    : ( !#strings.isEmpty(r.user.email) ? r.user.email
+                                        : '#' + r.user.id ) )
+                                : 'Гость'}">Гость</span>
                 </div>
                 <p th:text="${r.body}">Текст отзыва…</p>
+
+                <form th:if="${#authentication!=null and r.user != null and #authentication.name == r.user.username}"
+                      th:action="@{|/events/reviews/${r.id}/delete|}" method="post" style="margin-top:8px">
+                    <input type="hidden" name="eventId" th:value="${event.id}">
+                    <button class="btn" type="submit">Удалить</button>
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                </form>
             </div>
 
             <div class="muted" th:if="${#lists.isEmpty(reviews)}">Пока нет отзывов.</div>
+        </div>
+
+        <div style="margin-top:16px">
+            <div th:if="${#authorization?.expression('isAuthenticated()')}">
+                <form th:action="@{|/events/${event.id}/reviews|}" method="post" class="card ui-form">
+                    <div class="ui-form-row">
+                        <label class="ui-field">
+                            <span class="ui-label">Оценка</span>
+                            <select class="ui-input" name="rating" required>
+                                <option th:each="r : ${#numbers.sequence(5,1)}"
+                                        th:value="${r}"
+                                        th:text="${r}"
+                                        th:selected="${reviewForm != null and reviewForm.rating != null and reviewForm.rating == r}">
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="ui-field">
+                        <span class="ui-label">Отзыв</span>
+                        <textarea class="ui-input" name="body" rows="4" required maxlength="1000"
+                                  placeholder="Поделитесь впечатлениями..."
+                                  th:text="${reviewForm != null ? reviewForm.body : ''}"></textarea>
+                    </label>
+
+                    <div class="ui-actions">
+                        <button class="btn" type="submit">Отправить отзыв</button>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    </div>
+                </form>
+            </div>
+
+            <div th:if="${#authorization?.expression('!isAuthenticated()')}" class="muted">
+                Чтобы оставить отзыв, <a th:href="@{/login}" class="link">войдите</a>.
+            </div>
         </div>
     </section>
 

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Профиль</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+    <style>
+        dialog { border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--text); }
+        dialog::backdrop { background: rgba(0,0,0,.6); }
+        .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    </style>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="wrap">
+    <section class="card">
+        <div class="section-title">
+            <h2>Профиль пользователя</h2>
+            <div class="ui-actions">
+                <button class="btn-outline" onclick="openModal('dlg-username')">Изменить логин</button>
+                <button class="btn-outline" onclick="openModal('dlg-email')">Изменить email</button>
+                <button class="btn" onclick="openModal('dlg-password')">Сменить пароль</button>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+            <div><strong>Логин:</strong> <span th:text="${user.username}"></span></div>
+        </div>
+        <div class="row">
+            <div><strong>Email:</strong> <span th:text="${user.email}"></span></div>
+        </div>
+        <div class="row">
+            <div><strong>Роль:</strong> <span th:text="${user.role.title}"></span></div>
+        </div>
+
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+        <div th:if="${ok}" class="alert alert-ok" th:text="${ok}"></div>
+    </section>
+</main>
+
+<dialog id="dlg-username">
+    <form method="dialog" class="modal-head">
+        <h3>Изменить логин</h3>
+        <button class="btn-outline">✕</button>
+    </form>
+    <form th:action="@{/profile/username}" method="post" class="ui-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div class="ui-field">
+            <label class="ui-label">Новый логин</label>
+            <input class="ui-input" name="username" th:value="${user.username}" required maxlength="100">
+        </div>
+        <div class="ui-field">
+            <label class="ui-label">Текущий пароль</label>
+            <input class="ui-input" name="currentPassword" type="password" required>
+        </div>
+        <div class="ui-actions">
+            <button type="submit" class="btn">Сохранить</button>
+            <button type="button" class="btn-outline" onclick="closeModal('dlg-username')">Отмена</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="dlg-email">
+    <form method="dialog" class="modal-head">
+        <h3>Изменить email</h3>
+        <button class="btn-outline">✕</button>
+    </form>
+    <form th:action="@{/profile/email}" method="post" class="ui-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div class="ui-field">
+            <label class="ui-label">Новый email</label>
+            <input class="ui-input" name="email" type="email" th:value="${user.email}" required maxlength="320">
+        </div>
+        <div class="ui-field">
+            <label class="ui-label">Текущий пароль</label>
+            <input class="ui-input" name="currentPassword" type="password" required>
+        </div>
+        <div class="ui-actions">
+            <button type="submit" class="btn">Сохранить</button>
+            <button type="button" class="btn-outline" onclick="closeModal('dlg-email')">Отмена</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="dlg-password">
+    <form method="dialog" class="modal-head">
+        <h3>Сменить пароль</h3>
+        <button class="btn-outline">✕</button>
+    </form>
+    <form th:action="@{/profile/password}" method="post" class="ui-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div class="ui-field">
+            <label class="ui-label">Текущий пароль</label>
+            <input class="ui-input" name="currentPassword" type="password" required>
+        </div>
+        <div class="ui-field">
+            <label class="ui-label">Новый пароль</label>
+            <input class="ui-input" name="newPassword" type="password" minlength="8" required>
+        </div>
+        <div class="ui-field">
+            <label class="ui-label">Подтверждение нового пароля</label>
+            <input class="ui-input" name="confirmNewPassword" type="password" minlength="8" required>
+        </div>
+        <div class="ui-actions">
+            <button type="submit" class="btn">Сохранить</button>
+            <button type="button" class="btn-outline" onclick="closeModal('dlg-password')">Отмена</button>
+        </div>
+    </form>
+</dialog>
+
+<footer><div class="wrap">© Кадр</div></footer>
+
+<script>
+    function openModal(id){ document.getElementById(id).showModal(); }
+    function closeModal(id){ document.getElementById(id).close(); }
+
+    (function() {
+      const map = {
+        '#edit-username': 'dlg-username',
+        '#edit-email': 'dlg-email',
+        '#edit-password': 'dlg-password'
+      };
+      const dlg = map[location.hash];
+      if (dlg) openModal(dlg);
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+<div th:fragment="alerts" xmlns:th="http://www.w3.org/1999/xhtml">
+    <div class="alert alert-ok"    th:if="${notice}" th:text="${notice}"></div>
+    <div class="alert alert-warn"  th:if="${warn}"   th:text="${warn}"></div>
+    <div class="alert alert-error" th:if="${error}"  th:text="${error}"></div>
+</div>

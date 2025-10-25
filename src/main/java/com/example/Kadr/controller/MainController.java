@@ -1,6 +1,7 @@
 package com.example.Kadr.controller;
 
 import com.example.Kadr.model.Event;
+import com.example.Kadr.repository.TicketRepository;
 import com.example.Kadr.service.EventService;
 import com.example.Kadr.service.EventTypeService;
 import com.example.Kadr.service.OrganizerService;
@@ -33,6 +34,7 @@ public class MainController {
     private final EventService eventService;
     private final ReviewService reviewService;
     private final OrganizerService organizerService;
+    private final TicketRepository ticketRepository;
 
     @GetMapping
     public String showMain(Model model) {
@@ -47,6 +49,7 @@ public class MainController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("event", event);
         model.addAttribute("reviews", reviewService.getForEvent(id, 20));
+        model.addAttribute("tickets", ticketRepository.findByEvent_Id(id)); // NEW
         return "event-details";
     }
     @GetMapping("/about")
@@ -98,5 +101,10 @@ public class MainController {
         model.addAttribute("size", size);
 
         return "events";
+    }
+
+    @GetMapping("/access-denied")
+    public String accessDenied() {
+        return "access-denied";
     }
 }

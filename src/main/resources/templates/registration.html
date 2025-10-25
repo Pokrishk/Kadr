@@ -1,10 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Регистрация — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
 </head>
 <body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
 
+<main class="wrap">
+    <section class="card" style="max-width:720px;margin:28px auto;">
+        <div class="section-title">
+            <h2>Создайте аккаунт</h2>
+            <span class="muted">Быстро и бесплатно</span>
+        </div>
+
+        <form th:action="@{/register}" method="post" th:object="${user}"
+              style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <div class="filters" style="grid-template-columns:1fr 1fr;">
+                <div class="field" style="grid-column:1 / -1;">
+                    <label for="username">Логин</label>
+                    <input id="username" th:field="*{username}" placeholder="Ваш логин">
+                    <div class="muted" th:if="${#fields.hasErrors('username')}"
+                         th:errors="*{username}"></div>
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                    <label for="email">Email</label>
+                    <input id="email" th:field="*{email}" placeholder="you@example.com">
+                    <div class="muted" th:if="${#fields.hasErrors('email')}"
+                         th:errors="*{email}"></div>
+                </div>
+
+                <div class="field">
+                    <label for="password">Пароль</label>
+                    <input id="password" type="password" th:field="*{password}" placeholder="Минимум 8 символов">
+                    <div class="muted" th:if="${#fields.hasErrors('password')}"
+                         th:errors="*{password}"></div>
+                </div>
+
+                <div class="field">
+                    <label for="confirmPassword">Подтверждение пароля</label>
+                    <input id="confirmPassword" type="password" th:field="*{confirmPassword}" placeholder="Повторите пароль">
+                    <div class="muted" th:if="${#fields.hasErrors('confirmPassword')}"
+                         th:errors="*{confirmPassword}"></div>
+                </div>
+            </div>
+
+            <div class="row" style="justify-content:space-between;">
+                <a class="link" th:href="@{/login}">У меня уже есть аккаунт</a>
+                <button class="btn" type="submit">Зарегистрироваться</button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">© Кадр</div>
+</footer>
 </body>
 </html>
