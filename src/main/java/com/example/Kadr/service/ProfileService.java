@@ -1,7 +1,10 @@
 package com.example.Kadr.service;
 
+import com.example.Kadr.model.Organizer;
 import com.example.Kadr.model.User;
+import com.example.Kadr.repository.OrganizerRepository;
 import com.example.Kadr.repository.UserRepository;
+import jakarta.validation.ConstraintViolation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,12 +12,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.validation.Validator;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final AppUserDetailsService uds;
+    private final Validator validator;
+    private final OrganizerRepository organizers;
 
     private void verifyPassword(User user, String raw) {
         if (raw == null || !passwordEncoder.matches(raw, user.getPasswordHash())) {
@@ -72,5 +80,31 @@ public class ProfileService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         users.save(user);
         refreshAuthentication(user.getUsername());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasOrganizer(User user) {
+        return organizers.existsByUser(user);
+    }
+
+    @Transactional
+    public Organizer createOrganizerForUser(User user, String organizationName, String contactEmail) {
+        if (organizers.existsByUser(user)) {
+            throw new IllegalArgumentException("За вашим профилем уже закреплён организатор.");
+        }
+
+        Organizer org = Organizer.builder()
+                .user(user)
+                .organizationName(organizationName == null ? null : organizationName.trim())
+                .contactEmail(contactEmail == null ? null : contactEmail.trim())
+                .build();
+
+        Set<ConstraintViolation<Organizer>> violations = validator.validate(org);
+        if (!violations.isEmpty()) {
+            String message = violations.iterator().next().getMessage();
+            throw new IllegalArgumentException(message);
+        }
+
+        return organizers.save(org);
     }
 }

@@ -23,6 +23,9 @@
                 <button class="btn-outline" onclick="openModal('dlg-username')">Изменить логин</button>
                 <button class="btn-outline" onclick="openModal('dlg-email')">Изменить email</button>
                 <button class="btn" onclick="openModal('dlg-password')">Сменить пароль</button>
+                <button class="btn" th:if="${!hasOrganizer}" onclick="openModal('dlg-organizer')">
+                    Стать организатором
+                </button>
             </div>
         </div>
 
@@ -111,6 +114,43 @@
     </form>
 </dialog>
 
+<dialog id="dlg-organizer">
+    <form method="dialog" class="modal-head">
+        <h3>Создание организатора</h3>
+        <button class="btn-outline">✕</button>
+    </form>
+
+    <form th:action="@{/profile/organizer}" method="post" class="ui-form" novalidate>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+        <div class="ui-field">
+            <label class="ui-label">Название организации</label>
+            <input class="ui-input"
+                   name="organizationName"
+                   required
+                   maxlength="200"
+                   placeholder="ООО «КиноПраздник»">
+            <small class="muted">Обязательно, до 200 символов.</small>
+        </div>
+
+        <div class="ui-field">
+            <label class="ui-label">Контактный email</label>
+            <input class="ui-input"
+                   name="contactEmail"
+                   type="email"
+                   required
+                   maxlength="320"
+                   placeholder="org@example.com">
+            <small class="muted">Обязательно, действительный email.</small>
+        </div>
+
+        <div class="ui-actions">
+            <button type="submit" class="btn">Создать</button>
+            <button type="button" class="btn-outline" onclick="closeModal('dlg-organizer')">Отмена</button>
+        </div>
+    </form>
+</dialog>
+
 <footer><div class="wrap">© Кадр</div></footer>
 
 <script>
@@ -121,7 +161,8 @@
       const map = {
         '#edit-username': 'dlg-username',
         '#edit-email': 'dlg-email',
-        '#edit-password': 'dlg-password'
+        '#edit-password': 'dlg-password',
+        '#new-organizer': 'dlg-organizer'
       };
       const dlg = map[location.hash];
       if (dlg) openModal(dlg);

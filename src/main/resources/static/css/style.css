@@ -76,6 +76,17 @@ header .nav-right button.link {
     border: none;
     cursor: pointer;
 }
+.field-error{color:#ffd9d9;font-size:12px;margin-top:6px}
+.is-invalid{border-color:#5a2626;box-shadow:0 0 0 2px rgba(255,0,0,.08)}
+.field-error {
+  margin-top: 6px;
+  color: #ffb3b3;
+  font-size: 12px;
+}
+.ui-input.is-invalid {
+  border-color: #6b1f1f !important;
+  box-shadow: 0 0 0 2px rgba(220, 20, 60, .2);
+}
 
 header nav a:hover,
 header .nav-right .link:hover,
@@ -100,7 +111,39 @@ header .nav-right button.link:hover { opacity: 1; transform: translateY(-1px); }
     border-radius: 999px;
     font-size: 12px;
 }
-
+.bar {
+    height: 10px;
+    background: var(--accent);
+    border-radius: 999px;
+    display: inline-block;
+    min-width: 3px;
+}
+.bar-wrap {
+    background: var(--pill);
+    border-radius: 999px;
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+}
+.charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+}
+.chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+}
+.chart-card h3 { margin: 0 0 8px 0; }
+.chart-card { height: 360px; }
+.chart-card canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
 .logout-inline { display: inline; }
 .logout-inline .link,
 .logout-inline button.link {

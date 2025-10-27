@@ -15,22 +15,21 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class Ticket {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ticket_id")
     private Long id;
 
-    @NotNull
-    @DecimalMin("0.0")
-    @Digits(integer = 10, fraction = 2)
+    @DecimalMin(value = "0.00", inclusive = true, message = "Цена не может быть отрицательной")
+    @Digits(integer = 10, fraction = 2, message = "Цена должна быть числом с двумя знаками после запятой")
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "Поле 'Место/тип' не должно превышать 50 символов")
     @Column(name = "seat", length = 50)
     private String seat;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;

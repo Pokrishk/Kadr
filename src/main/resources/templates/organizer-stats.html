@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Статистика организатора — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="wrap">
+    <div class="breadcrumbs">
+        <a th:href="@{/}" class="link">Главная</a> ›
+        <a th:href="@{/organizer/panel}" class="link">Панель организатора</a> ›
+        <strong>Статистика</strong>
+    </div>
+
+    <section>
+        <div class="section-title">
+            <h2 th:text="'Статистика — ' + (${organizer != null} ? ${organizer.organizationName} : 'Организатор')">Статистика</h2>
+            <div class="ui-actions">
+                <a class="btn-outline" th:href="@{/organizer/panel}">← Панель</a>
+                <a class="btn" th:href="@{/organizer/stats/export}">⭳ Экспорт в Excel</a>
+                <a class="btn-outline" th:href="@{/events}">Каталог событий</a>
+                <a class="btn" th:href="@{/organizer/events/new}">+ Добавить событие</a>
+            </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
+            <div class="card">
+                <div class="muted">Событий (в выборке)</div>
+                <div style="font-size: 26px; font-weight: 700;" id="kpi-events">—</div>
+                <div class="bar-wrap" style="margin-top: 8px;"><span class="bar" id="kpi-events-bar" style="width:0%"></span></div>
+            </div>
+            <div class="card">
+                <div class="muted">Выручка суммарно</div>
+                <div style="font-size: 26px; font-weight: 700;" id="kpi-revenue">—</div>
+                <div class="bar-wrap" style="margin-top: 8px;"><span class="bar" id="kpi-revenue-bar" style="width:0%"></span></div>
+            </div>
+            <div class="card">
+                <div class="muted">Средний рейтинг по типам</div>
+                <div style="font-size: 26px; font-weight: 700;" id="kpi-avg">—</div>
+                <div class="bar-wrap" style="margin-top: 8px;"><span class="bar" id="kpi-avg-bar" style="width:0%"></span></div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Событий по месяцам (шт.)</h3>
+                <canvas id="chartEventsByMonth"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3>Выручка по месяцам (₽)</h3>
+                <canvas id="chartRevenueByMonth"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3>Средний рейтинг по типам</h3>
+                <canvas id="chartAvgByType"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3>Топ событий: билеты и выручка</h3>
+                <canvas id="chartTicketsAndRevenue"></canvas>
+                <div class="muted" style="margin-top:8px; font-size:12px;">
+                    Горизонтальные столбцы: левая шкала — билеты, правая шкала — выручка.
+                </div>
+            </div>
+        </div>
+
+        <noscript>
+            <section style="margin-top: 18px;">
+                <div class="card">
+                    <h3>Данные (без графиков)</h3>
+                    <div class="grid" style="grid-template-columns: 1fr; gap: 12px;">
+                        <div class="ui-table-wrap">
+                            <table class="ui-table">
+                                <thead><tr><th>Месяц</th><th>Событий</th></tr></thead>
+                                <tbody>
+                                <tr th:each="r : ${statsEventsByMonth}">
+                                    <td th:text="${r['label']}">2025-10</td>
+                                    <td th:text="${r['count']}">0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="ui-table-wrap">
+                            <table class="ui-table">
+                                <thead><tr><th>Месяц</th><th>Выручка, ₽</th></tr></thead>
+                                <tbody>
+                                <tr th:each="r : ${statsRevenueByMonth}">
+                                    <td th:text="${r['label']}">2025-10</td>
+                                    <td th:text="${#numbers.formatDecimal(r['revenue'],1,2)}">0.00</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="ui-table-wrap">
+                            <table class="ui-table">
+                                <thead><tr><th>Тип</th><th>Средний рейтинг</th></tr></thead>
+                                <tbody>
+                                <tr th:each="r : ${statsAvgRatingByType}">
+                                    <td th:text="${r['type']}">Тип</td>
+                                    <td th:text="${#numbers.formatDecimal(r['avgRating'],1,1)}">0.0</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="ui-table-wrap">
+                            <table class="ui-table">
+                                <thead><tr><th>Событие</th><th>Билеты</th><th>Выручка, ₽</th></tr></thead>
+                                <tbody>
+                                <tr th:each="r : ${statsTicketsAndRevenueByEvent}">
+                                    <td th:text="${r['title']}">Событие</td>
+                                    <td th:text="${r['tickets']}">0</td>
+                                    <td th:text="${#numbers.formatDecimal(r['revenue'],1,2)}">0.00</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </noscript>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <p class="muted">© Кадр, <span th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2025</span></p>
+    </div>
+</footer>
+
+<script th:inline="javascript">
+    const dataEventsByMonth  = /*[[${statsEventsByMonth}]]*/ [];
+    const dataRevenueByMonth = /*[[${statsRevenueByMonth}]]*/ [];
+    const dataAvgByType      = /*[[${statsAvgRatingByType}]]*/ [];
+    const dataByEvent        = /*[[${statsTicketsAndRevenueByEvent}]]*/ [];
+
+    (function calcKPIs() {
+      const kpiEvents = dataEventsByMonth.reduce((s, r) => s + (Number(r.count) || 0), 0);
+      const kpiRevenue = dataRevenueByMonth.reduce((s, r) => s + (Number(r.revenue) || 0), 0);
+      const avgList = dataAvgByType.map(r => Number(r.avgRating) || 0);
+      const kpiAvg = avgList.length ? (avgList.reduce((a,b)=>a+b,0) / avgList.length) : 0;
+
+      document.getElementById('kpi-events').textContent = kpiEvents.toString();
+      document.getElementById('kpi-revenue').textContent = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(kpiRevenue);
+      document.getElementById('kpi-avg').textContent = kpiAvg.toFixed(1);
+
+      document.getElementById('kpi-events-bar').style.width  = Math.min(100, kpiEvents) + '%';
+      const revNorm = kpiRevenue ? Math.min(100, Math.log10(kpiRevenue + 10) * 20) : 0;
+      document.getElementById('kpi-revenue-bar').style.width = revNorm + '%';
+      document.getElementById('kpi-avg-bar').style.width     = (kpiAvg / 5 * 100) + '%';
+    })();
+
+    const gridColor = '#1d2130';
+    const axisColor = '#9aa0a6';
+
+    (() => {
+      const ctx = document.getElementById('chartEventsByMonth');
+      const labels = dataEventsByMonth.map(r => r.label);
+      const dataset = dataEventsByMonth.map(r => Number(r.count) || 0);
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Событий',
+            data: dataset,
+            borderWidth: 1,
+            backgroundColor: 'rgba(106,166,255,0.35)',
+            borderColor: 'rgba(106,166,255,0.9)',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: axisColor } },
+            y: { grid: { color: gridColor }, ticks: { color: axisColor }, beginAtZero: true, precision: 0 }
+          },
+          plugins: {
+            legend: { labels: { color: axisColor } },
+            tooltip: { mode: 'index', intersect: false }
+          }
+        }
+      });
+    })();
+
+    (() => {
+      const ctx = document.getElementById('chartRevenueByMonth');
+      const labels = dataRevenueByMonth.map(r => r.label);
+      const dataset = dataRevenueByMonth.map(r => Number(r.revenue) || 0);
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: '₽ Выручка',
+            data: dataset,
+            tension: 0.35,
+            fill: true,
+            backgroundColor: 'rgba(106,166,255,0.15)',
+            borderColor: 'rgba(106,166,255,0.9)',
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: axisColor } },
+            y: {
+              grid: { color: gridColor }, ticks: {
+                color: axisColor,
+                callback: v => new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+              },
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: { labels: { color: axisColor } },
+            tooltip: {
+              callbacks: {
+                label: ctx => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(ctx.parsed.y)
+              }
+            }
+          }
+        }
+      });
+    })();
+
+    (() => {
+      const ctx = document.getElementById('chartAvgByType');
+      const labels = dataAvgByType.map(r => r.type);
+      const dataset = dataAvgByType.map(r => Number(r.avgRating) || 0);
+
+      const base = [ '#6aa6ff', '#7bcfa1', '#e8b16a', '#d26aff', '#ff7b9c', '#9bb7ff', '#6ae0ff' ];
+      const colors = labels.map((_, i) => base[i % base.length] + 'cc');
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: dataset,
+            backgroundColor: colors,
+            borderColor: '#0b0c10',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: axisColor, usePointStyle: true } },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.parsed.toFixed(1)} ★`
+              }
+            }
+          },
+          cutout: '60%'
+        }
+      });
+    })();
+
+    (() => {
+  const el = document.getElementById('chartTicketsAndRevenue');
+  if (!el) return;
+
+  const top = (Array.isArray(dataByEvent) ? dataByEvent : []).slice(0, 12);
+  if (!top.length) return;
+
+  const labels  = top.map(r => r.title ?? '');
+  const tickets = top.map(r => Number(r.tickets) || 0);
+  const revenue = top.map(r => Number(r.revenue) || 0);
+
+  const prev = Chart.getChart(el);
+  if (prev) prev.destroy();
+
+  new Chart(el, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Билеты (шт.)',
+          data: tickets,
+          borderWidth: 1,
+          backgroundColor: 'rgba(123,207,161,0.35)',
+          borderColor: 'rgba(123,207,161,0.9)',
+          borderRadius: 6,
+          xAxisID: 'x',
+        },
+        {
+          type: 'bar',
+          label: 'Выручка (₽)',
+          data: revenue,
+          borderWidth: 1,
+          backgroundColor: 'rgba(106,166,255,0.30)',
+          borderColor: 'rgba(106,166,255,0.9)',
+          borderRadius: 6,
+          xAxisID: 'x1',
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          type: 'category',
+          grid: { color: gridColor },
+          ticks: { color: axisColor }
+        },
+        x: {
+          position: 'bottom',
+          grid: { color: gridColor },
+          ticks: { color: axisColor, precision: 0 },
+          beginAtZero: true
+        },
+        x1: {
+          position: 'top',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: axisColor,
+            callback: v => new Intl.NumberFormat('ru-RU', {
+              notation: 'compact',
+              maximumFractionDigits: 1
+            }).format(v)
+          },
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        legend: { labels: { color: axisColor } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.x;
+              if (ctx.dataset.label.includes('Выручка')) {
+                return `${ctx.dataset.label}: ` + new Intl.NumberFormat('ru-RU', {
+                  style: 'currency', currency: 'RUB'
+                }).format(v);
+              }
+              return `${ctx.dataset.label}: ${v}`;
+            }
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

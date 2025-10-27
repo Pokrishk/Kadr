@@ -1,7 +1,10 @@
 package com.example.Kadr.service;
 
+import com.example.Kadr.model.Address;
 import com.example.Kadr.model.Event;
+import com.example.Kadr.model.Organizer;
 import com.example.Kadr.repository.EventRepository;
+import com.example.Kadr.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,10 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final TicketRepository ticketRepository;
 
     @Transactional(readOnly = true)
     public List<Event> getUpcomingRandom(OffsetDateTime from, int poolSize, int limit) {
@@ -118,5 +119,121 @@ public class EventService {
     private OffsetDateTime toOffset(LocalDateTime ldt) {
         ZoneId zone = ZoneId.systemDefault();
         return ldt.atZone(zone).toOffsetDateTime();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Event> listForOrganizer(Long organizerId, int page, int size, String sortDir) {
+        Sort sort = Sort.by("eventDatetime");
+        sort = "desc".equalsIgnoreCase(sortDir) ? sort.descending() : sort.ascending();
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
+        return eventRepository.findByOrganizer_Id(organizerId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Event getByIdForOrganizerOrThrow(Long id, Long organizerId) {
+        return eventRepository.findById(id)
+                .filter(e -> e.getOrganizer().getId().equals(organizerId))
+                .orElseThrow(() -> new IllegalArgumentException("Событие не найдено или вам не принадлежит"));
+    }
+
+    @Transactional
+    public Event createForOrganizer(Event e, Organizer organizer) {
+        e.setId(null);
+        e.setOrganizer(organizer);
+        if (e.getRating() == null) e.setRating(java.math.BigDecimal.ZERO);
+        return eventRepository.save(e);
+    }
+
+    @Transactional
+    public Event updateForOrganizer(Long id, Long organizerId, Event patch) {
+        Event existing = getByIdForOrganizerOrThrow(id, organizerId);
+        existing.setTitle(patch.getTitle());
+        existing.setDescription(patch.getDescription());
+        existing.setTicketsTotal(patch.getTicketsTotal());
+        existing.setEventDatetime(patch.getEventDatetime());
+        if (patch.getEventType() != null) existing.setEventType(patch.getEventType());
+
+        if (patch.getAddress() != null) {
+            Address a = existing.getAddress();
+            if (a == null) a = new Address();
+            a.setCountry(patch.getAddress().getCountry());
+            a.setCity(patch.getAddress().getCity());
+            a.setStreet(patch.getAddress().getStreet());
+            a.setHouse(patch.getAddress().getHouse());
+            a.setBuilding(patch.getAddress().getBuilding());
+            existing.setAddress(a);
+        }
+
+        return eventRepository.save(existing);
+    }
+
+    @Transactional
+    public void deleteForOrganizer(Long id, Long organizerId) {
+        Event e = getByIdForOrganizerOrThrow(id, organizerId);
+        eventRepository.deleteById(e.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsEventsByMonth(Long organizerId) {
+        var rows = eventRepository.countEventsByMonth(organizerId);
+        List<Map<String, Object>> res = new ArrayList<>();
+        for (Object[] r : rows) {
+            res.add(Map.of(
+                    "label", formatMonth(r[0]),
+                    "count", ((Number) r[1]).longValue()
+            ));
+        }
+        return res;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsRevenueByMonth(Long organizerId) {
+        var rows = ticketRepository.revenueByMonth(organizerId);
+        List<Map<String, Object>> res = new ArrayList<>();
+        for (Object[] r : rows) {
+            res.add(Map.of(
+                    "label", formatMonth(r[0]),
+                    "revenue", ((Number) r[1]).doubleValue()
+            ));
+        }
+        return res;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsTicketsAndRevenueByEvent(Long organizerId) {
+        var rows = ticketRepository.ticketsAndRevenueByEvent(organizerId);
+        List<Map<String, Object>> res = new ArrayList<>();
+        for (Object[] r : rows) {
+            res.add(Map.of(
+                    "eventId", (Long) r[0],
+                    "title", (String) r[1],
+                    "tickets", ((Number) r[2]).longValue(),
+                    "revenue", ((Number) r[3]).doubleValue()
+            ));
+        }
+        return res;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsAvgRatingByType(Long organizerId) {
+        var rows = eventRepository.avgRatingByType(organizerId);
+        List<Map<String, Object>> res = new ArrayList<>();
+        for (Object[] r : rows) {
+            res.add(Map.of(
+                    "type", (String) r[0],
+                    "avgRating", ((Number) r[1]).doubleValue()
+            ));
+        }
+        return res;
+    }
+
+    private String formatMonth(Object dbVal) {
+        if (dbVal instanceof OffsetDateTime odt) {
+            return odt.getYear() + "-" + String.format("%02d", odt.getMonthValue());
+        }
+        if (dbVal instanceof LocalDateTime ldt) {
+            return ldt.getYear() + "-" + String.format("%02d", ldt.getMonthValue());
+        }
+        return String.valueOf(dbVal);
     }
 }

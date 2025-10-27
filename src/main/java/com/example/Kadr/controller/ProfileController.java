@@ -25,6 +25,7 @@ public class ProfileController {
         if (principal == null) return "redirect:/login";
         User user = users.findByUsername(principal.getUsername()).orElseThrow();
         model.addAttribute("user", user);
+        model.addAttribute("hasOrganizer", profileService.hasOrganizer(user));
         return "profile";
     }
 
@@ -76,6 +77,22 @@ public class ProfileController {
         } catch (IllegalArgumentException ex) {
             ra.addFlashAttribute("error", ex.getMessage());
             return "redirect:/profile#edit-password";
+        }
+        return "redirect:/profile";
+    }
+    @PostMapping("/profile/organizer")
+    public String createOrganizer(@AuthenticationPrincipal UserDetails principal,
+                                  @RequestParam("organizationName") String organizationName,
+                                  @RequestParam("contactEmail") String contactEmail,
+                                  RedirectAttributes ra) {
+        if (principal == null) return "redirect:/login";
+        User user = users.findByUsername(principal.getUsername()).orElseThrow();
+        try {
+            profileService.createOrganizerForUser(user, organizationName, contactEmail);
+            ra.addFlashAttribute("ok", "Организатор создан и закреплён за вашим профилем.");
+        } catch (IllegalArgumentException ex) {
+            ra.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/profile#new-organizer";
         }
         return "redirect:/profile";
     }

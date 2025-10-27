@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,4 +27,25 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Event e where e.id = :id")
     Optional<Event> findForUpdate(@Param("id") Long id);
+    Page<Event> findByOrganizer_Id(Long organizerId, Pageable pageable);
+
+    boolean existsByIdAndOrganizer_Id(Long id, Long organizerId);
+
+    @Query("""
+        select function('DATE_TRUNC','month', e.eventDatetime) as ym, count(e)
+        from Event e
+        where e.organizer.id = :orgId
+        group by function('DATE_TRUNC','month', e.eventDatetime)
+        order by ym
+        """)
+    List<Object[]> countEventsByMonth(@Param("orgId") Long organizerId);
+
+    @Query("""
+        select et.title, avg(e.rating)
+        from Event e join e.eventType et
+        where e.organizer.id = :orgId
+        group by et.title
+        order by et.title
+        """)
+    List<Object[]> avgRatingByType(@Param("orgId") Long organizerId);
 }

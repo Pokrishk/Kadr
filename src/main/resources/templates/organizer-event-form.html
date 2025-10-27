@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${mode=='create' ? 'Новое событие — Кадр' : 'Редактирование события — Кадр'}">Событие — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+
+<main class="wrap">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+    <div class="breadcrumbs">
+        <a th:href="@{/}" class="link">Главная</a> ›
+        <a th:href="@{/organizer/panel}" class="link">Панель организатора</a> ›
+        <strong th:text="${mode=='create' ? 'Новое событие' : 'Редактирование события'}">Событие</strong>
+    </div>
+
+    <form class="card ui-form"
+          th:action="${mode=='create'} ? @{/organizer/events} : @{/organizer/events/{id}(id=${eventId})}"
+          method="post" th:object="${event}">
+
+        <div class="ui-form-row">
+            <label class="ui-field">
+                <span class="ui-label">Название</span>
+                <input class="ui-input"
+                       th:field="*{title}"
+                       th:classappend="${#fields.hasErrors('title')} ? ' is-invalid' : ''"
+                       maxlength="200" required>
+                <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+            </label>
+
+            <label class="ui-field">
+                <span class="ui-label">Дата и время</span>
+                <input class="ui-input" type="datetime-local"
+                       th:field="*{eventDateTimeLocal}"
+                       th:classappend="${#fields.hasErrors('eventDateTimeLocal')} ? ' is-invalid' : ''"
+                       step="60" required>
+                <div class="field-error" th:if="${#fields.hasErrors('eventDateTimeLocal')}" th:errors="*{eventDateTimeLocal}"></div>
+            </label>
+        </div>
+
+        <label class="ui-field">
+            <span class="ui-label">Описание</span>
+            <textarea class="ui-input"
+                      th:field="*{description}"
+                      th:classappend="${#fields.hasErrors('description')} ? ' is-invalid' : ''"
+                      maxlength="200" rows="3" required></textarea>
+            <div class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+        </label>
+
+        <div class="ui-form-row">
+            <label class="ui-field">
+                <span class="ui-label">Тип события</span>
+                <select class="ui-input"
+                        th:field="*{eventType.id}"
+                        th:classappend="${#fields.hasErrors('eventType.id') or #fields.hasErrors('eventType')} ? ' is-invalid' : ''"
+                        required>
+                    <option th:each="t : ${types}" th:value="${t.id}" th:text="${t.title}"></option>
+                </select>
+                <div class="field-error"
+                     th:if="${#fields.hasErrors('eventType.id') or #fields.hasErrors('eventType')}"
+                     th:errors="*{eventType.id}">Выберите тип события</div>
+            </label>
+
+            <label class="ui-field">
+                <span class="ui-label">Билетов всего</span>
+                <input class="ui-input" type="number" min="0"
+                       th:field="*{ticketsTotal}"
+                       th:classappend="${#fields.hasErrors('ticketsTotal')} ? ' is-invalid' : ''"
+                       required>
+                <div class="field-error" th:if="${#fields.hasErrors('ticketsTotal')}" th:errors="*{ticketsTotal}"></div>
+            </label>
+        </div>
+
+        <div class="section-title">
+            <h2>Адрес проведения</h2>
+        </div>
+
+        <div class="ui-form-row">
+            <label class="ui-field">
+                <span class="ui-label">Страна</span>
+                <input class="ui-input"
+                       th:field="*{address.country}"
+                       th:classappend="${#fields.hasErrors('address.country')} ? ' is-invalid' : ''"
+                       required>
+                <div class="field-error" th:if="${#fields.hasErrors('address.country')}" th:errors="*{address.country}"></div>
+            </label>
+            <label class="ui-field">
+                <span class="ui-label">Город</span>
+                <input class="ui-input"
+                       th:field="*{address.city}"
+                       th:classappend="${#fields.hasErrors('address.city')} ? ' is-invalid' : ''"
+                       required>
+                <div class="field-error" th:if="${#fields.hasErrors('address.city')}" th:errors="*{address.city}"></div>
+            </label>
+            <label class="ui-field">
+                <span class="ui-label">Улица</span>
+                <input class="ui-input"
+                       th:field="*{address.street}"
+                       th:classappend="${#fields.hasErrors('address.street')} ? ' is-invalid' : ''"
+                       required>
+                <div class="field-error" th:if="${#fields.hasErrors('address.street')}" th:errors="*{address.street}"></div>
+            </label>
+        </div>
+
+        <div class="ui-form-row">
+            <label class="ui-field">
+                <span class="ui-label">Дом</span>
+                <input class="ui-input"
+                       th:field="*{address.house}"
+                       th:classappend="${#fields.hasErrors('address.house')} ? ' is-invalid' : ''">
+                <div class="field-error" th:if="${#fields.hasErrors('address.house')}" th:errors="*{address.house}"></div>
+            </label>
+            <label class="ui-field">
+                <span class="ui-label">Корпус</span>
+                <input class="ui-input"
+                       th:field="*{address.building}"
+                       th:classappend="${#fields.hasErrors('address.building')} ? ' is-invalid' : ''">
+                <div class="field-error" th:if="${#fields.hasErrors('address.building')}" th:errors="*{address.building}"></div>
+            </label>
+        </div>
+
+        <div class="section-title">
+            <h2>Типы билетов</h2>
+            <button class="btn-outline" type="button" id="addTicketBtn">+ Добавить</button>
+        </div>
+
+        <div id="ticketsWrap" class="grid" style="grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:10px;">
+            <div class="card" th:each="t, iStat : *{tickets}">
+                <div class="ui-form-row">
+                    <label class="ui-field">
+                        <span class="ui-label">Цена, ₽</span>
+                        <input class="ui-input" type="number" min="0" step="0.01"
+                               th:field="*{tickets[__${iStat.index}__].price}"
+                               th:classappend="${#fields.hasErrors('tickets[' + iStat.index + '].price')} ? ' is-invalid' : ''"
+                               required>
+                        <div class="field-error"
+                             th:if="${#fields.hasErrors('tickets[' + iStat.index + '].price')}"
+                             th:errors="*{tickets[__${iStat.index}__].price}"></div>
+                    </label>
+                    <label class="ui-field">
+                        <span class="ui-label">Место/тип (необязательно)</span>
+                        <input class="ui-input"
+                               th:field="*{tickets[__${iStat.index}__].seat}"
+                               th:classappend="${#fields.hasErrors('tickets[' + iStat.index + '].seat')} ? ' is-invalid' : ''"
+                               placeholder="напр. VIP, A12">
+                        <div class="field-error"
+                             th:if="${#fields.hasErrors('tickets[' + iStat.index + '].seat')}"
+                             th:errors="*{tickets[__${iStat.index}__].seat}"></div>
+                    </label>
+                </div>
+                <button class="btn-outline" type="button" onclick="removeTicket(this)">Удалить</button>
+            </div>
+        </div>
+
+        <div class="ui-actions">
+            <a class="btn-outline" th:href="@{/organizer/panel}">Отмена</a>
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <button class="btn" type="submit" th:text="${mode=='create' ? 'Создать' : 'Сохранить'}">Сохранить</button>
+        </div>
+    </form>
+</main>
+
+<footer><div class="wrap">© Кадр</div></footer>
+
+<script>
+    const wrap = document.getElementById('ticketsWrap');
+    const addBtn = document.getElementById('addTicketBtn');
+
+    function tmpl(idx){
+      return `
+        <div class="card">
+          <div class="ui-form-row">
+            <label class="ui-field">
+              <span class="ui-label">Цена, ₽</span>
+              <input class="ui-input" type="number" name="tickets[${idx}].price" min="0" step="0.01" required>
+              <div class="field-error"></div>
+            </label>
+            <label class="ui-field">
+              <span class="ui-label">Место/тип (необязательно)</span>
+              <input class="ui-input" name="tickets[${idx}].seat" placeholder="напр. VIP, A12">
+              <div class="field-error"></div>
+            </label>
+          </div>
+          <button class="btn-outline" type="button" onclick="removeTicket(this)">Удалить</button>
+        </div>`;
+    }
+
+    addBtn?.addEventListener('click', () => {
+      const idx = wrap.querySelectorAll('.card').length;
+      wrap.insertAdjacentHTML('beforeend', tmpl(idx));
+    });
+
+    window.removeTicket = (btn) => {
+      const card = btn.closest('.card');
+      card?.remove();
+      [...wrap.querySelectorAll('.card')].forEach((c, i) => {
+        c.querySelectorAll('input').forEach(inp => {
+          if (inp.name.includes('.price')) inp.name = `tickets[${i}].price`;
+          if (inp.name.includes('.seat'))  inp.name = `tickets[${i}].seat`;
+        });
+      });
+    }
+</script>
+</body>
+</html>

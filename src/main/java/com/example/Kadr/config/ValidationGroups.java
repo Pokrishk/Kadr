@@ -3,4 +3,6 @@ public class ValidationGroups {
 
     public interface OnRegister {}
     public interface OnPersist {}
+    public interface FormGroup {}
+    public interface PersistGroup {}
 }
