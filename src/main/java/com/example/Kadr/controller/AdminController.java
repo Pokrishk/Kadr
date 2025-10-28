@@ -1,5 +1,6 @@
 package com.example.Kadr.controller;
 
+import com.example.Kadr.model.LogEntry;
 import com.example.Kadr.model.Organizer;
 import com.example.Kadr.model.Role;
 import com.example.Kadr.model.User;
@@ -16,8 +17,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 @Controller
 @RequestMapping("/admin")
@@ -191,20 +196,49 @@ public class AdminController {
         response.setContentType("text/csv; charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=logs.csv");
 
-        try (PrintWriter writer = response.getWriter()) {
-            writer.println("ID;Дата;Действие;Комментарий");
-            for (var log : adminService.getLogsForExport()) {
-                String actionTitle = log.getAction() != null ? log.getAction().getTitle() : "";
+        try (var os = response.getOutputStream();
+             var writer = new BufferedWriter(
+                     new OutputStreamWriter(os, StandardCharsets.UTF_8))) {
+            os.write(0xEF); os.write(0xBB); os.write(0xBF);
+            writer.write("sep=;");
+            writer.write("\r\n");
+            writer.write("ID;Дата;Пользователь;Таблица;Действие;Комментарий\r\n");
+
+            for (LogEntry log : adminService.getLogsForExport()) {
                 String created = log.getCreatedAt() != null ? log.getCreatedAt().toString() : "";
-                String comment = log.getCommentText() != null ? log.getCommentText().replaceAll("[\r\n]", " ") : "";
-                writer.printf("%d;%s;%s;%s%n",
+                String actor = log.getActorUsernameDisplay();
+                if (actor == null || actor.isBlank()) actor = "Система";
+                String comment = log.getCommentText() != null
+                        ? log.getCommentText().replaceAll("[\r\n]", " ")
+                        : "";
+
+                writer.write(String.format("%d;%s;%s;%s;%s;%s\r\n",
                         log.getId(),
                         created,
-                        escapeCsv(actionTitle),
-                        escapeCsv(comment)
-                );
+                        escapeCsv(actor),
+                        escapeCsv(log.getTableNameDisplay()),
+                        escapeCsv(log.getActionDescriptionDisplay()),
+                        escapeCsv(comment)));
             }
+
+            writer.flush();
         }
+    }
+
+    private String escapeCsv(String s) {
+        if (s == null) return "";
+        boolean needQuotes = s.contains(";") || s.contains("\"") || s.contains(",") ||
+                s.contains("\n") || s.contains("\r");
+        String v = s.replace("\"", "\"\"");
+        return needQuotes ? "\"" + v + "\"" : v;
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : s;
+    }
+
+    private String flatten(String s) {
+        return s == null ? "" : s.replace("\r", " ").replace("\n", " ").trim();
     }
 
     private void normalizeUser(User user) {
@@ -248,16 +282,5 @@ public class AdminController {
                 br.rejectValue("role.id", "NotNull", "Выберите роль");
             }
         }
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) {
-            return "";
-        }
-        String sanitized = value.replace("\"", "\"\"");
-        if (sanitized.contains(";") || sanitized.contains("\"")) {
-            return '"' + sanitized + '"';
-        }
-        return sanitized;
     }
 }

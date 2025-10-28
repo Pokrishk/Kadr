@@ -11,9 +11,9 @@ import java.util.List;
 
 @Repository
 public interface LogEntryRepository extends JpaRepository<LogEntry, Long> {
-    @EntityGraph(attributePaths = {"action"})
+    @EntityGraph(attributePaths = {"action", "userLogs", "userLogs.user"})
     Page<LogEntry> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    @EntityGraph(attributePaths = {"action"})
+    @EntityGraph(attributePaths = {"action", "userLogs", "userLogs.user"})
     List<LogEntry> findAllByOrderByCreatedAtDesc();
 }

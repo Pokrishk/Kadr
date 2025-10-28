@@ -1,6 +1,7 @@
 package com.example.Kadr.service;
 
 import com.example.Kadr.model.Address;
+import com.example.Kadr.model.AuditAction;
 import com.example.Kadr.model.Event;
 import com.example.Kadr.model.Organizer;
 import com.example.Kadr.repository.EventRepository;
@@ -24,6 +25,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final TicketRepository ticketRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<Event> getUpcomingRandom(OffsetDateTime from, int poolSize, int limit) {
@@ -45,12 +47,29 @@ public class EventService {
     public Optional<Event> findById(Long id) { return eventRepository.findById(id); }
 
     @Transactional
-    public Event save(Event e) { return eventRepository.save(e); }
+    public Event save(Event e) {
+        boolean isNew = e.getId() == null;
+        Event saved = eventRepository.save(e);
+        auditLogService.log(
+                isNew ? AuditAction.CREATE : AuditAction.UPDATE,
+                "events",
+                String.format("%s событие \"%s\" (ID=%d)",
+                        isNew ? "Создано" : "Обновлено",
+                        saved.getTitle(),
+                        saved.getId())
+        );
+        return saved;
+    }
 
     @Transactional
     public boolean deleteById(Long id) {
         if (eventRepository.existsById(id)) {
             eventRepository.deleteById(id);
+            auditLogService.log(
+                    AuditAction.DELETE,
+                    "events",
+                    String.format("Удалено событие ID=%d", id)
+            );
             return true;
         }
         return false;
@@ -141,7 +160,15 @@ public class EventService {
         e.setId(null);
         e.setOrganizer(organizer);
         if (e.getRating() == null) e.setRating(java.math.BigDecimal.ZERO);
-        return eventRepository.save(e);
+        Event saved = eventRepository.save(e);
+        auditLogService.log(
+                AuditAction.CREATE,
+                "events",
+                String.format("Создано событие \"%s\" (ID=%d)",
+                        saved.getTitle(),
+                        saved.getId())
+        );
+        return saved;
     }
 
     @Transactional
@@ -164,13 +191,28 @@ public class EventService {
             existing.setAddress(a);
         }
 
-        return eventRepository.save(existing);
+        Event saved = eventRepository.save(existing);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "events",
+                String.format("Обновлено событие \"%s\" (ID=%d)",
+                        saved.getTitle(),
+                        saved.getId())
+        );
+        return saved;
     }
 
     @Transactional
     public void deleteForOrganizer(Long id, Long organizerId) {
         Event e = getByIdForOrganizerOrThrow(id, organizerId);
         eventRepository.deleteById(e.getId());
+        auditLogService.log(
+                AuditAction.DELETE,
+                "events",
+                String.format("Удалено событие \"%s\" (ID=%d)",
+                        e.getTitle(),
+                        e.getId())
+        );
     }
 
     @Transactional(readOnly = true)

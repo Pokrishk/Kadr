@@ -125,7 +125,7 @@ public class OrganizerController {
                         .build());
             }
         }
-        eventRepository.save(e);
+        eventService.save(e);
         ra.addFlashAttribute("notice", "Событие создано.");
         return "redirect:/organizer/panel";
     }
@@ -201,7 +201,7 @@ public class OrganizerController {
                         .build());
             }
         }
-        eventRepository.save(e);
+        eventService.save(e);
         ra.addFlashAttribute("notice", "Событие обновлено");
         return "redirect:/organizer/panel";
     }

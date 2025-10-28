@@ -1,5 +1,6 @@
 package com.example.Kadr.service;
 
+import com.example.Kadr.model.AuditAction;
 import com.example.Kadr.model.Organizer;
 import com.example.Kadr.model.User;
 import com.example.Kadr.repository.OrganizerRepository;
@@ -23,6 +24,7 @@ public class ProfileService {
     private final AppUserDetailsService uds;
     private final Validator validator;
     private final OrganizerRepository organizers;
+    private final AuditLogService auditLogService;
 
     private void verifyPassword(User user, String raw) {
         if (raw == null || !passwordEncoder.matches(raw, user.getPasswordHash())) {
@@ -50,6 +52,11 @@ public class ProfileService {
         });
         user.setUsername(newUsername);
         users.save(user);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format("Изменён логин пользователя ID=%d на %s", user.getId(), user.getUsername())
+        );
         refreshAuthentication(user.getUsername());
     }
 
@@ -66,6 +73,11 @@ public class ProfileService {
         });
         user.setEmail(newEmail);
         users.save(user);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format("Изменён email пользователя %s (ID=%d)", user.getUsername(), user.getId())
+        );
     }
 
     @Transactional
@@ -79,6 +91,11 @@ public class ProfileService {
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         users.save(user);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format("Изменён пароль пользователя %s (ID=%d)", user.getUsername(), user.getId())
+        );
         refreshAuthentication(user.getUsername());
     }
 
@@ -105,6 +122,12 @@ public class ProfileService {
             throw new IllegalArgumentException(message);
         }
 
-        return organizers.save(org);
+        Organizer saved = organizers.save(org);
+        auditLogService.log(
+                AuditAction.CREATE,
+                "organizers",
+                String.format("Создан организатор ID=%d для пользователя %s", saved.getId(), user.getUsername())
+        );
+        return saved;
     }
 }

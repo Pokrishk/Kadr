@@ -1,5 +1,6 @@
 package com.example.Kadr.service;
 
+import com.example.Kadr.model.AuditAction;
 import com.example.Kadr.model.Event;
 import com.example.Kadr.model.Review;
 import com.example.Kadr.model.User;
@@ -19,6 +20,7 @@ import java.util.List;
 public class ReviewService {
     private final ReviewRepository reviews;
     private final EventRepository events;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<Review> getForEvent(Long eventId, int limit) {
@@ -45,6 +47,11 @@ public class ReviewService {
         try {
             var saved = reviews.save(review);
             recalcEventRating(event);
+            auditLogService.log(
+                    AuditAction.CREATE,
+                    "reviews",
+                    String.format("Добавлен отзыв (ID=%d) к событию \"%s\"", saved.getId(), event.getTitle())
+            );
             return saved;
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Вы уже оставляли отзыв к этому событию.", e);
@@ -60,6 +67,11 @@ public class ReviewService {
         var event = r.getEvent();
         reviews.delete(r);
         recalcEventRating(event);
+        auditLogService.log(
+                AuditAction.DELETE,
+                "reviews",
+                String.format("Удалён отзыв ID=%d пользователем %s", reviewId, user.getUsername())
+        );
     }
     @Transactional(readOnly = true)
     public List<Review> getLatestFiveStar(int limit) {

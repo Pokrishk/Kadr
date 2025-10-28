@@ -29,6 +29,8 @@
             <tr>
                 <th>ID</th>
                 <th>Дата и время</th>
+                <th>Пользователь</th>
+                <th>Таблица</th>
                 <th>Действие</th>
                 <th>Комментарий</th>
             </tr>
@@ -37,7 +39,9 @@
             <tr th:each="log : ${page.content}">
                 <td th:text="${log.id}">1</td>
                 <td th:text="${log.createdAt != null ? #temporals.format(log.createdAt, 'dd.MM.yyyy HH:mm') : '—'}">01.01.2024</td>
-                <td th:text="${log.action != null ? log.action.title : '—'}">Action</td>
+                <td th:text="${log.actorUsernameDisplay != null && !#strings.isEmpty(log.actorUsernameDisplay) ? log.actorUsernameDisplay : 'Система'}">admin</td>
+                <td th:text="${log.tableNameDisplay}">events</td>
+                <td th:text="${log.actionDescriptionDisplay}">Action</td>
                 <td th:text="${log.commentText != null ? log.commentText : ''}">Комментарий</td>
             </tr>
             </tbody>

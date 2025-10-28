@@ -1,10 +1,7 @@
 package com.example.Kadr.service;
 
 import com.example.Kadr.config.ValidationGroups;
-import com.example.Kadr.model.LogEntry;
-import com.example.Kadr.model.Organizer;
-import com.example.Kadr.model.Role;
-import com.example.Kadr.model.User;
+import com.example.Kadr.model.*;
 import com.example.Kadr.repository.LogEntryRepository;
 import com.example.Kadr.repository.OrganizerRepository;
 import com.example.Kadr.repository.RoleRepository;
@@ -31,6 +28,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final LogEntryRepository logEntryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
     private final Validator validator;
 
     @Transactional(readOnly = true)
@@ -51,6 +49,13 @@ public class AdminService {
 
         user.setRole(organizerRole);
         userRepository.save(user);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format("Назначена роль организатора пользователю %s (ID=%d)",
+                        user.getUsername(),
+                        user.getId())
+        );
     }
 
     @Transactional
@@ -58,6 +63,13 @@ public class AdminService {
         Organizer organizer = organizerRepository.findById(organizerId)
                 .orElseThrow(() -> new IllegalArgumentException("Заявка не найдена"));
         organizerRepository.delete(organizer);
+        auditLogService.log(
+                AuditAction.DELETE,
+                "organizers",
+                String.format("Отклонена заявка организатора (ID=%d, пользователь=%s)",
+                        organizer.getId(),
+                        organizer.getUser().getUsername())
+        );
     }
 
     @Transactional(readOnly = true)
@@ -117,7 +129,13 @@ public class AdminService {
         user.setPasswordHash(passwordEncoder.encode(form.getPassword()));
 
         validateUser(user);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        auditLogService.log(
+                AuditAction.CREATE,
+                "users",
+                String.format("Создан пользователь %s (ID=%d)", saved.getUsername(), saved.getId())
+        );
+        return saved;
     }
 
     @Transactional
@@ -134,7 +152,15 @@ public class AdminService {
         }
 
         validateUser(user);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format("Обновлены данные пользователя %s (ID=%d)",
+                        saved.getUsername(),
+                        saved.getId())
+        );
+        return saved;
     }
 
     @Transactional
@@ -143,6 +169,11 @@ public class AdminService {
             throw new IllegalArgumentException("Пользователь не найден");
         }
         userRepository.deleteById(id);
+        auditLogService.log(
+                AuditAction.DELETE,
+                "users",
+                String.format("Удалён пользователь ID=%d", id)
+        );
     }
 
     @Transactional(readOnly = true)
