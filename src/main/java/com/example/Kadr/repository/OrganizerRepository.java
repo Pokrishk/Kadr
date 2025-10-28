@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -35,4 +37,10 @@ public interface OrganizerRepository extends JpaRepository<Organizer, Long> {
     List<Organizer> findAllByUser_Role_Id(Long roleId);
 
     Optional<Organizer> findByUser_UsernameIgnoreCase(String username);
+    @EntityGraph(attributePaths = {"user", "user.role"})
+    @Query("select o from Organizer o join o.user u join u.role r where upper(r.title) <> upper(:organizerTitle)")
+    Page<Organizer> findPendingRequests(@Param("organizerTitle") String organizerTitle, Pageable pageable);
+
+    @Query("select count(o) from Organizer o join o.user u join u.role r where upper(r.title) <> upper(:organizerTitle)")
+    long countPendingRequests(@Param("organizerTitle") String organizerTitle);
 }

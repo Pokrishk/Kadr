@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Логи — Кадр</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+<main class="wrap">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+    <div class="section-title" style="margin-top:16px">
+        <h2>Журнал действий</h2>
+        <div class="row" style="margin:0">
+            <a class="btn" th:href="@{/admin/logs/export}">Экспорт CSV</a>
+            <a class="btn" th:href="@{/admin}" style="margin-left:8px">Назад в панель</a>
+        </div>
+    </div>
+
+    <div class="card ui-table-wrap" style="margin-top:14px">
+        <div th:if="${page.totalElements == 0}" class="muted" style="padding:14px">
+            Записей нет.
+        </div>
+        <table th:if="${page.totalElements > 0}" class="ui-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Дата и время</th>
+                <th>Действие</th>
+                <th>Комментарий</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="log : ${page.content}">
+                <td th:text="${log.id}">1</td>
+                <td th:text="${log.createdAt != null ? #temporals.format(log.createdAt, 'dd.MM.yyyy HH:mm') : '—'}">01.01.2024</td>
+                <td th:text="${log.action != null ? log.action.title : '—'}">Action</td>
+                <td th:text="${log.commentText != null ? log.commentText : ''}">Комментарий</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="paging" th:if="${page.totalPages > 1}">
+            <a th:if="${page.hasPrevious()}" th:href="@{|/admin/logs?page=${page.number-1}&size=${page.size}|}">← Назад</a>
+            <span class="current" th:text="${page.number + 1}">1</span>
+            <a th:if="${page.hasNext()}" th:href="@{|/admin/logs?page=${page.number+1}&size=${page.size}|}">Вперёд →</a>
+        </div>
+    </div>
+</main>
+<footer><div class="wrap">© Кадр</div></footer>
+</body>
+</html>

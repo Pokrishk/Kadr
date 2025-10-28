@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${mode == 'create' ? 'Создание пользователя — Кадр' : 'Редактирование пользователя — Кадр'}">Форма пользователя</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="icon" type="image/png" th:href="@{/images/лого.png}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader}"></header>
+<main class="wrap">
+    <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+    <div class="section-title" style="margin-top:16px">
+        <h2 th:text="${mode == 'create' ? 'Создать пользователя' : 'Редактировать пользователя'}">Форма пользователя</h2>
+        <a class="btn" th:href="@{/admin/users}">Назад к списку</a>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+        <form th:object="${user}"
+              th:action="${mode == 'create'} ? @{/admin/users} : @{|/admin/users/${user.id}|}"
+              method="post" class="ui-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-error"
+                 th:text="${#fields.errors()[0]}"></div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="username">Логин</label>
+                <input id="username" type="text" class="ui-input" th:classappend="${#fields.hasErrors('username')} ? ' is-invalid'"
+                       th:field="*{username}" placeholder="Логин">
+                <div class="field-error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></div>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="email">Email</label>
+                <input id="email" type="email" class="ui-input" th:classappend="${#fields.hasErrors('email')} ? ' is-invalid'"
+                       th:field="*{email}" placeholder="Email">
+                <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="role">Роль</label>
+                <select id="role" class="ui-input" th:classappend="${#fields.hasErrors('role.id')} ? ' is-invalid'"
+                        th:field="*{role.id}">
+                    <option value="" disabled th:selected="${user.role == null or user.role.id == null}">Выберите роль</option>
+                    <option th:each="role : ${roles}"
+                            th:value="${role.id}"
+                            th:selected="${user.role != null && role.id == user.role.id}"
+                            th:text="${role.title}">Role</option>
+                </select>
+                <div class="field-error" th:if="${#fields.hasErrors('role.id')}" th:errors="*{role.id}"></div>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="password">Пароль</label>
+                <input id="password" type="password" class="ui-input" th:classappend="${#fields.hasErrors('password')} ? ' is-invalid'"
+                       th:field="*{password}" placeholder="Пароль">
+                <div class="field-error" th:if="${mode == 'create'}">Минимум 8 символов</div>
+                <div class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="confirmPassword">Подтверждение пароля</label>
+                <input id="confirmPassword" type="password" class="ui-input" th:classappend="${#fields.hasErrors('confirmPassword')} ? ' is-invalid'"
+                       th:field="*{confirmPassword}" placeholder="Повторите пароль">
+                <div class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+            </div>
+
+            <div class="ui-actions">
+                <button class="btn" type="submit" th:text="${mode == 'create' ? 'Создать' : 'Сохранить'}">Сохранить</button>
+                <a class="btn-outline" th:href="@{/admin/users}">Отмена</a>
+            </div>
+        </form>
+    </div>
+</main>
+<footer><div class="wrap">© Кадр</div></footer>
+</body>
+</html>
