@@ -1,5 +1,7 @@
 package com.example.Kadr.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -17,6 +19,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class LogEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,6 +36,7 @@ public class LogEntry {
 
     @OneToMany(mappedBy = "log", fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonManagedReference("log-userLogs")
     private Set<UserLog> userLogs = new LinkedHashSet<>();
 
     @Column(name = "created_at", nullable = false)
