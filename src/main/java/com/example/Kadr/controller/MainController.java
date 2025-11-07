@@ -22,9 +22,17 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.data.domain.Pageable;
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
 
 @Controller
 @RequestMapping("/")
@@ -49,7 +57,7 @@ public class MainController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("event", event);
         model.addAttribute("reviews", reviewService.getForEvent(id, 20));
-        model.addAttribute("tickets", ticketRepository.findByEvent_Id(id)); // NEW
+        model.addAttribute("tickets", ticketRepository.findByEvent_Id(id));
         return "event-details";
     }
     @GetMapping("/about")
@@ -103,8 +111,112 @@ public class MainController {
         return "events";
     }
 
+    @GetMapping("/events/export")
+    public void exportEvents(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long typeId,
+            @RequestParam(required = false) Long organizerId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime timeFrom,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime timeTo,
+            @RequestParam(defaultValue = "asc") String sort,
+            HttpServletResponse response
+    ) throws IOException {
+        List<Event> events = eventService.searchAll(q, typeId, organizerId, dateFrom, dateTo, timeFrom, timeTo, sort);
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=events.csv");
+
+        try (var os = response.getOutputStream();
+             var writer = new BufferedWriter(new OutputStreamWriter(os, java.nio.charset.StandardCharsets.UTF_8))) {
+            os.write(0xEF); os.write(0xBB); os.write(0xBF);
+            writer.write("sep=;");
+            writer.write("\r\n");
+            writer.write("ID;Название;Дата и время;Организатор;Тип;Адрес;Описание;Рейтинг;Билеты всего\r\n");
+
+            Locale locale = Locale.forLanguageTag("ru-RU");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", locale);
+            ZoneId zone = ZoneId.systemDefault();
+
+            for (Event event : events) {
+                String id = event.getId() != null ? event.getId().toString() : "";
+                String date = event.getEventDatetime() != null
+                        ? event.getEventDatetime().atZoneSameInstant(zone).format(formatter)
+                        : "";
+                String organizer = event.getOrganizer() != null ? safe(event.getOrganizer().getOrganizationName()) : "";
+                String type = event.getEventType() != null ? safe(event.getEventType().getTitle()) : "";
+                String address = formatAddress(event);
+                String title = flatten(event.getTitle());
+                String description = flatten(event.getDescription());
+                String rating = event.getRating() != null ? event.getRating().toPlainString() : "";
+                String tickets = event.getTicketsTotal() != null ? event.getTicketsTotal().toString() : "";
+
+                writer.write(String.join(";",
+                        escapeCsv(id),
+                        escapeCsv(title),
+                        escapeCsv(date),
+                        escapeCsv(organizer),
+                        escapeCsv(type),
+                        escapeCsv(address),
+                        escapeCsv(description),
+                        escapeCsv(rating),
+                        escapeCsv(tickets)
+                ));
+                writer.write("\r\n");
+            }
+
+            writer.flush();
+        }
+    }
     @GetMapping("/access-denied")
     public String accessDenied() {
         return "access-denied";
+    }
+
+    private String formatAddress(Event event) {
+        if (event.getAddress() == null) {
+            return "";
+        }
+        var address = event.getAddress();
+        var parts = new java.util.ArrayList<String>();
+        if (address.getCountry() != null && !address.getCountry().isBlank()) {
+            parts.add(address.getCountry().trim());
+        }
+        if (address.getCity() != null && !address.getCity().isBlank()) {
+            parts.add(address.getCity().trim());
+        }
+        var streetParts = new java.util.ArrayList<String>();
+        if (address.getStreet() != null && !address.getStreet().isBlank()) {
+            streetParts.add(address.getStreet().trim());
+        }
+        if (address.getHouse() != null && !address.getHouse().isBlank()) {
+            streetParts.add("д. " + address.getHouse().trim());
+        }
+        if (address.getBuilding() != null && !address.getBuilding().isBlank()) {
+            streetParts.add("к. " + address.getBuilding().trim());
+        }
+        if (!streetParts.isEmpty()) {
+            parts.add(String.join(", ", streetParts));
+        }
+        return String.join(", ", parts);
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        boolean needQuotes = value.contains(";") || value.contains("\"") || value.contains(",")
+                || value.contains("\n") || value.contains("\r");
+        String normalized = value.replace("\"", "\"\"");
+        return needQuotes ? "\"" + normalized + "\"" : normalized;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String flatten(String value) {
+        return value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').trim();
     }
 }

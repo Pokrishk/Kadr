@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
     <title>События — Кадр</title>
@@ -13,73 +13,107 @@
 <main class="wrap">
     <section>
         <div class="section-title">
-            <h2>События</h2>
-            <span class="muted" th:text="${events.totalElements} + ' найдено'">0 найдено</span>
+            <div class="section-heading">
+                <h2>События</h2>
+                <span class="muted" th:text="${events.totalElements} + ' найдено'">0 найдено</span>
+            </div>
+            <div class="row" style="margin:0; flex-wrap: wrap; justify-content: flex-end;">
+                <button class="btn-outline" type="button"
+                        data-hotkey="filters"
+                        data-label-expanded="Скрыть фильтры"
+                        data-label-collapsed="Показать фильтры"
+                        aria-expanded="true">
+                    Скрыть фильтры
+                </button>
+                <a class="btn-outline" style="margin-left:8px"
+                   data-hotkey="export"
+                   th:href="@{/events/export(
+                        q=${q},
+                        typeId=${typeId},
+                        organizerId=${organizerId},
+                        dateFrom=${dateFrom},
+                        timeFrom=${timeFrom},
+                        dateTo=${dateTo},
+                        timeTo=${timeTo},
+                        sort=${sort}
+                   )}">
+                    Экспорт CSV
+                </a>
+                <a class="btn" style="margin-left:8px"
+                   sec:authorize="hasRole('ORGANIZER')"
+                   data-hotkey="create-event"
+                   th:href="@{/organizer/events/new}">
+                    Создать событие
+                </a>
+            </div>
         </div>
 
-        <form class="card" method="get" style="padding:14px">
-            <div class="filters">
-                <div class="field">
-                    <label class="muted">Поиск</label>
-                    <input type="text" name="q" placeholder="Название…" th:value="${q}">
-                </div>
+        <form class="card filter-panel" method="get" style="padding:14px" data-filters-panel>
+            <div class="filter-body">
+                <div class="filters">
+                    <div class="field">
+                        <label class="muted" for="eventsSearch">Поиск</label>
+                        <input id="eventsSearch" type="text" name="q" placeholder="Название…"
+                               th:value="${q}" data-hotkey="search">
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Тип</label>
-                    <select name="typeId">
-                        <option th:value="${null}" th:selected="${typeId == null}">Любой</option>
-                        <option th:each="t : ${types}"
-                                th:value="${t.id}"
-                                th:text="${t.title}"
-                                th:selected="${typeId != null and typeId == t.id}">
-                        </option>
-                    </select>
-                </div>
+                    <div class="field">
+                        <label class="muted">Тип</label>
+                        <select name="typeId">
+                            <option th:value="${null}" th:selected="${typeId == null}">Любой</option>
+                            <option th:each="t : ${types}"
+                                    th:value="${t.id}"
+                                    th:text="${t.title}"
+                                    th:selected="${typeId != null and typeId == t.id}">
+                            </option>
+                        </select>
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Организатор</label>
-                    <select name="organizerId">
-                        <option th:value="${null}" th:selected="${organizerId == null}">Любой</option>
-                        <option th:each="o : ${organizers}"
-                                th:value="${o.id}"
-                                th:text="${o.organizationName}"
-                                th:selected="${organizerId != null and organizerId == o.id}">
-                        </option>
-                    </select>
-                </div>
+                    <div class="field">
+                        <label class="muted">Организатор</label>
+                        <select name="organizerId">
+                            <option th:value="${null}" th:selected="${organizerId == null}">Любой</option>
+                            <option th:each="o : ${organizers}"
+                                    th:value="${o.id}"
+                                    th:text="${o.organizationName}"
+                                    th:selected="${organizerId != null and organizerId == o.id}">
+                            </option>
+                        </select>
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Дата с</label>
-                    <input type="date" name="dateFrom" th:value="${dateFrom}">
-                </div>
+                    <div class="field">
+                        <label class="muted">Дата с</label>
+                        <input type="date" name="dateFrom" th:value="${dateFrom}">
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Время с</label>
-                    <input type="time" name="timeFrom" th:value="${timeFrom}">
-                </div>
+                    <div class="field">
+                        <label class="muted">Время с</label>
+                        <input type="time" name="timeFrom" th:value="${timeFrom}">
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Дата по</label>
-                    <input type="date" name="dateTo" th:value="${dateTo}">
-                </div>
+                    <div class="field">
+                        <label class="muted">Дата по</label>
+                        <input type="date" name="dateTo" th:value="${dateTo}">
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Время по</label>
-                    <input type="time" name="timeTo" th:value="${timeTo}">
-                </div>
+                    <div class="field">
+                        <label class="muted">Время по</label>
+                        <input type="time" name="timeTo" th:value="${timeTo}">
+                    </div>
 
-                <div class="field">
-                    <label class="muted">Сортировка</label>
-                    <select name="sort">
-                        <option value="asc"  th:selected="${sort == 'asc'}">Дата ↑</option>
-                        <option value="desc" th:selected="${sort == 'desc'}">Дата ↓</option>
-                    </select>
-                </div>
+                    <div class="field">
+                        <label class="muted">Сортировка</label>
+                        <select name="sort">
+                            <option value="asc"  th:selected="${sort == 'asc'}">Дата ↑</option>
+                            <option value="desc" th:selected="${sort == 'desc'}">Дата ↓</option>
+                        </select>
+                    </div>
             </div>
 
-            <div class="row" style="justify-content:flex-end; margin-top:12px">
-                <button class="btn" type="submit">Применить</button>
-                <a class="link" th:href="@{/events}" style="margin-left:10px">Сбросить</a>
+                <div class="row" style="justify-content:flex-end; margin-top:12px">
+                    <button class="btn" type="submit">Применить</button>
+                    <a class="link" th:href="@{/events}" style="margin-left:10px">Сбросить</a>
+                </div>
             </div>
         </form>
     </section>

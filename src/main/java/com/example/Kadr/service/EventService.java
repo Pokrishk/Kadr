@@ -87,6 +87,46 @@ public class EventService {
             int size,
             String sortDir
     ) {
+        Specification<Event> spec = buildSearchSpecification(
+                q, typeId, organizerId, dateFrom, dateTo, timeFrom, timeTo
+        );
+
+        Sort sort = resolveSort(sortDir);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
+        return eventRepository.findAll(spec, pageable);
+    }
+    @Transactional(readOnly = true)
+    public List<Event> searchAll(
+            String q,
+            Long typeId,
+            Long organizerId,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            LocalTime timeFrom,
+            LocalTime timeTo,
+            String sortDir
+    ) {
+        Specification<Event> spec = buildSearchSpecification(
+                q, typeId, organizerId, dateFrom, dateTo, timeFrom, timeTo
+        );
+        Sort sort = resolveSort(sortDir);
+        return eventRepository.findAll(spec, sort);
+    }
+
+    private Sort resolveSort(String sortDir) {
+        Sort sort = Sort.by("eventDatetime");
+        return "desc".equalsIgnoreCase(sortDir) ? sort.descending() : sort.ascending();
+    }
+
+    private Specification<Event> buildSearchSpecification(
+            String q,
+            Long typeId,
+            Long organizerId,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            LocalTime timeFrom,
+            LocalTime timeTo
+    ) {
         List<Specification<Event>> specs = new ArrayList<>();
 
         if (q != null && !q.isBlank()) {
@@ -111,14 +151,7 @@ public class EventService {
         toOdt.ifPresent(odt ->
                 specs.add((root, cq, cb) -> cb.lessThanOrEqualTo(root.get("eventDatetime"), odt))
         );
-
-        Specification<Event> spec = specs.isEmpty() ? null : Specification.allOf(specs);
-
-        Sort sort = Sort.by("eventDatetime");
-        sort = "desc".equalsIgnoreCase(sortDir) ? sort.descending() : sort.ascending();
-
-        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), sort);
-        return eventRepository.findAll(spec, pageable);
+        return specs.isEmpty() ? null : Specification.allOf(specs);
     }
 
     private Optional<OffsetDateTime> composeFrom(LocalDate d, LocalTime t) {

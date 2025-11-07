@@ -4,6 +4,7 @@ import com.example.Kadr.model.Event;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,6 +25,12 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             attributePaths = {"eventType", "organizer", "address"}
     )
     Page<Event> findAll(org.springframework.data.jpa.domain.Specification<Event> spec, Pageable pageable);
+    @Override
+    @EntityGraph(
+            type = EntityGraph.EntityGraphType.FETCH,
+            attributePaths = {"eventType", "organizer", "address"}
+    )
+    List<Event> findAll(org.springframework.data.jpa.domain.Specification<Event> spec, Sort sort);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Event e where e.id = :id")
     Optional<Event> findForUpdate(@Param("id") Long id);

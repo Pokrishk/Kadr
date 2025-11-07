@@ -5,6 +5,7 @@ import com.example.Kadr.model.Organizer;
 import com.example.Kadr.model.Role;
 import com.example.Kadr.model.User;
 import com.example.Kadr.service.AdminService;
+import com.example.Kadr.service.EventTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -21,7 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import org.springframework.web.multipart.MultipartFile;
 import java.nio.charset.StandardCharsets;
 
 @Controller
@@ -30,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 public class AdminController {
 
     private final AdminService adminService;
+    private final EventTypeService eventTypeService;
 
     @GetMapping
     public String dashboard(Model model) {
@@ -69,6 +71,35 @@ public class AdminController {
             ra.addFlashAttribute("error", ex.getMessage());
         }
         return "redirect:/admin/organizer-requests";
+    }
+
+    @GetMapping("/event-types/import")
+    public String showEventTypeImport() {
+        return "event-type-import";
+    }
+
+    @PostMapping("/event-types/import")
+    public String handleEventTypeImport(@RequestParam("file") MultipartFile file,
+                                        RedirectAttributes ra) {
+        if (file == null || file.isEmpty()) {
+            ra.addFlashAttribute("error", "Выберите CSV-файл для импорта");
+            return "redirect:/admin/event-types/import";
+        }
+
+        try (var input = file.getInputStream()) {
+            EventTypeService.ImportResult result = eventTypeService.importFromCsv(input);
+            ra.addFlashAttribute("notice",
+                    String.format(
+                            "Импорт выполнен: обработано %d, создано %d, обновлено %d, пропущено %d",
+                            result.processed(), result.created(), result.updated(), result.skipped()
+                    ));
+        } catch (IllegalArgumentException ex) {
+            ra.addFlashAttribute("error", ex.getMessage());
+        } catch (IOException ex) {
+            ra.addFlashAttribute("error", "Не удалось прочитать файл: " + ex.getMessage());
+        }
+
+        return "redirect:/admin/event-types/import";
     }
 
     @GetMapping("/users")

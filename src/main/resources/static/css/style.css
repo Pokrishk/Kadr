@@ -156,6 +156,7 @@ main section { margin-top: 28px; }
 
 .section-title { display: flex; justify-content: space-between; align-items: center; }
 .section-title h2 { margin: 0; font-size: 20px; }
+.section-heading { display: flex; flex-direction: column; gap: 4px; }
 
 .breadcrumbs {
     display: flex; gap: 8px; align-items: center;
@@ -204,6 +205,8 @@ main section { margin-top: 28px; }
     color: var(--text);
 }
 .filters input::placeholder { color: var(--muted); }
+.filter-panel .filter-body { display: grid; gap: 12px; }
+.filter-panel.is-collapsed .filter-body { display: none; }
 
 .paging {
     display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 16px;
@@ -277,6 +280,9 @@ footer {
 .ui-table thead th { color: var(--muted); font-weight: 600; background: #11121a; }
 .ui-table tbody tr:hover { background: rgba(255,255,255,.02); }
 .ui-ta-right { text-align: right; }
+[data-hotkey-row] { outline: none; }
+[data-hotkey-row].is-hotkey-active,
+[data-hotkey-row]:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .ui-inline { display: inline; }
 
