@@ -22,11 +22,11 @@
     <div class="card" style="margin-top:14px">
         <form class="ui-form" th:action="@{/admin/event-types/import}" method="post" enctype="multipart/form-data">
             <div class="ui-field">
-                <label class="ui-label" for="csvFile">CSV-файл</label>
-                <input class="ui-input" id="csvFile" name="file" type="file" accept=".csv,text/csv" required>
+                <label class="ui-label" for="sqlFile">SQL-файл</label>
+                <input class="ui-input" id="sqlFile" name="file" type="file" accept=".sql,application/sql,text/plain" required>
             </div>
-            <p class="muted">Поддерживается разделитель «;» или «,» и строка заголовков с полями «Название» и «Описание».</p>
-            <p class="muted">Если тип уже существует, описание будет обновлено. Пустые строки и дубликаты пропускаются.</p>
+            <p class="muted">Загрузите SQL-скрипт с инструкциями вида <code>INSERT INTO event_types (title, description) VALUES (...);</code>.</p>
+            <p class="muted">Файл должен содержать только вставки в таблицу <strong>event_types</strong>. Значения описания необязательны.</p>
             <div class="ui-actions">
                 <a class="btn-outline" th:href="@{/admin}">Отмена</a>
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">

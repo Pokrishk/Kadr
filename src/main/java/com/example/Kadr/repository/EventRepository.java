@@ -42,17 +42,25 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
         select function('DATE_TRUNC','month', e.eventDatetime) as ym, count(e)
         from Event e
         where e.organizer.id = :orgId
+          and e.eventDatetime >= coalesce(:from, e.eventDatetime)
+          and e.eventDatetime <= coalesce(:to, e.eventDatetime)
         group by function('DATE_TRUNC','month', e.eventDatetime)
         order by ym
         """)
-    List<Object[]> countEventsByMonth(@Param("orgId") Long organizerId);
+    List<Object[]> countEventsByMonth(@Param("orgId") Long organizerId,
+                                      @Param("from") OffsetDateTime from,
+                                      @Param("to") OffsetDateTime to);
 
     @Query("""
         select et.title, avg(e.rating)
         from Event e join e.eventType et
         where e.organizer.id = :orgId
+          and e.eventDatetime >= coalesce(:from, e.eventDatetime)
+          and e.eventDatetime <= coalesce(:to, e.eventDatetime)
         group by et.title
         order by et.title
         """)
-    List<Object[]> avgRatingByType(@Param("orgId") Long organizerId);
+    List<Object[]> avgRatingByType(@Param("orgId") Long organizerId,
+                                   @Param("from") OffsetDateTime from,
+                                   @Param("to") OffsetDateTime to);
 }

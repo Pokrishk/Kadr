@@ -250,7 +250,13 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> statsEventsByMonth(Long organizerId) {
-        var rows = eventRepository.countEventsByMonth(organizerId);
+        return statsEventsByMonth(organizerId, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsEventsByMonth(Long organizerId, LocalDate from, LocalDate to) {
+        var bounds = resolveBounds(from, to);
+        var rows = eventRepository.countEventsByMonth(organizerId, bounds.from(), bounds.to());
         List<Map<String, Object>> res = new ArrayList<>();
         for (Object[] r : rows) {
             res.add(Map.of(
@@ -263,7 +269,13 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> statsRevenueByMonth(Long organizerId) {
-        var rows = ticketRepository.revenueByMonth(organizerId);
+        return statsRevenueByMonth(organizerId, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsRevenueByMonth(Long organizerId, LocalDate from, LocalDate to) {
+        var bounds = resolveBounds(from, to);
+        var rows = ticketRepository.revenueByMonth(organizerId, bounds.from(), bounds.to());
         List<Map<String, Object>> res = new ArrayList<>();
         for (Object[] r : rows) {
             res.add(Map.of(
@@ -276,7 +288,13 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> statsTicketsAndRevenueByEvent(Long organizerId) {
-        var rows = ticketRepository.ticketsAndRevenueByEvent(organizerId);
+        return statsTicketsAndRevenueByEvent(organizerId, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsTicketsAndRevenueByEvent(Long organizerId, LocalDate from, LocalDate to) {
+        var bounds = resolveBounds(from, to);
+        var rows = ticketRepository.ticketsAndRevenueByEvent(organizerId, bounds.from(), bounds.to());
         List<Map<String, Object>> res = new ArrayList<>();
         for (Object[] r : rows) {
             res.add(Map.of(
@@ -291,7 +309,13 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> statsAvgRatingByType(Long organizerId) {
-        var rows = eventRepository.avgRatingByType(organizerId);
+        return statsAvgRatingByType(organizerId, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> statsAvgRatingByType(Long organizerId, LocalDate from, LocalDate to) {
+        var bounds = resolveBounds(from, to);
+        var rows = eventRepository.avgRatingByType(organizerId, bounds.from(), bounds.to());
         List<Map<String, Object>> res = new ArrayList<>();
         for (Object[] r : rows) {
             res.add(Map.of(
@@ -306,9 +330,28 @@ public class EventService {
         if (dbVal instanceof OffsetDateTime odt) {
             return odt.getYear() + "-" + String.format("%02d", odt.getMonthValue());
         }
+        if (dbVal instanceof java.sql.Timestamp ts) {
+            var ldt = ts.toLocalDateTime();
+            return ldt.getYear() + "-" + String.format("%02d", ldt.getMonthValue());
+        }
         if (dbVal instanceof LocalDateTime ldt) {
             return ldt.getYear() + "-" + String.format("%02d", ldt.getMonthValue());
         }
         return String.valueOf(dbVal);
     }
+    private Range resolveBounds(LocalDate from, LocalDate to) {
+        OffsetDateTime fromTs = null;
+        OffsetDateTime toTs = null;
+        ZoneId zone = ZoneId.systemDefault();
+        if (from != null) {
+            fromTs = from.atStartOfDay(zone).toOffsetDateTime();
+        }
+        if (to != null) {
+            LocalDateTime endOfDay = to.atTime(LocalTime.MAX);
+            toTs = endOfDay.atZone(zone).toOffsetDateTime();
+        }
+        return new Range(fromTs, toTs);
+    }
+
+    private record Range(OffsetDateTime from, OffsetDateTime to) { }
 }

@@ -17,7 +17,9 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.annotation.Validated;
@@ -57,15 +59,26 @@ public class OrganizerController {
     }
 
     @GetMapping("/stats")
-    public String stats(Model model) {
+    public String stats(@RequestParam(value = "from", required = false)
+                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                        LocalDate from,
+                        @RequestParam(value = "to", required = false)
+                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                        LocalDate to,
+                        Model model) {
         Organizer org = organizerService.getCurrentOrganizerOrThrow();
         Long orgId = org.getId();
 
-        model.addAttribute("organizer", org);
-        model.addAttribute("statsEventsByMonth",             eventService.statsEventsByMonth(orgId));
-        model.addAttribute("statsRevenueByMonth",            eventService.statsRevenueByMonth(orgId));
-        model.addAttribute("statsTicketsAndRevenueByEvent",  eventService.statsTicketsAndRevenueByEvent(orgId));
-        model.addAttribute("statsAvgRatingByType",           eventService.statsAvgRatingByType(orgId));
+        var range = normalizeRange(from, to);
+        model.addAttribute("from", from);
+        model.addAttribute("to", to);
+        if (range.error() != null) {
+            model.addAttribute("filterError", range.error());
+        }
+        model.addAttribute("statsEventsByMonth",             eventService.statsEventsByMonth(orgId, range.from(), range.to()));
+        model.addAttribute("statsRevenueByMonth",            eventService.statsRevenueByMonth(orgId, range.from(), range.to()));
+        model.addAttribute("statsTicketsAndRevenueByEvent",  eventService.statsTicketsAndRevenueByEvent(orgId, range.from(), range.to()));
+        model.addAttribute("statsAvgRatingByType",           eventService.statsAvgRatingByType(orgId, range.from(), range.to()));
 
         return "organizer-stats";
     }
@@ -224,14 +237,22 @@ public class OrganizerController {
     }
 
     @GetMapping("/stats/export")
-    public void exportStats(HttpServletResponse response) throws IOException {
+    public void exportStats(@RequestParam(value = "from", required = false)
+                            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                            LocalDate from,
+                            @RequestParam(value = "to", required = false)
+                            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                            LocalDate to,
+                            HttpServletResponse response) throws IOException {
         Organizer org = organizerService.getCurrentOrganizerOrThrow();
         Long orgId = org.getId();
 
-        var eventsByMonth   = eventService.statsEventsByMonth(orgId);
-        var revenueByMonth  = eventService.statsRevenueByMonth(orgId);
-        var ticketsByEvent  = eventService.statsTicketsAndRevenueByEvent(orgId);
-        var ratingByType    = eventService.statsAvgRatingByType(orgId);
+        var range = normalizeRange(from, to);
+
+        var eventsByMonth   = eventService.statsEventsByMonth(orgId, range.from(), range.to());
+        var revenueByMonth  = eventService.statsRevenueByMonth(orgId, range.from(), range.to());
+        var ticketsByEvent  = eventService.statsTicketsAndRevenueByEvent(orgId, range.from(), range.to());
+        var ratingByType    = eventService.statsAvgRatingByType(orgId, range.from(), range.to());
 
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Статистика");
@@ -292,4 +313,12 @@ public class OrganizerController {
             wb.write(response.getOutputStream());
         }
     }
+    private Range normalizeRange(LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            return new Range(null, null, "Дата начала не может быть позже даты окончания");
+        }
+        return new Range(from, to, null);
+    }
+
+    private record Range(LocalDate from, LocalDate to, String error) { }
 }

@@ -82,12 +82,12 @@ public class AdminController {
     public String handleEventTypeImport(@RequestParam("file") MultipartFile file,
                                         RedirectAttributes ra) {
         if (file == null || file.isEmpty()) {
-            ra.addFlashAttribute("error", "Выберите CSV-файл для импорта");
+            ra.addFlashAttribute("error", "Выберите SQL-файл со скриптом вставки");
             return "redirect:/admin/event-types/import";
         }
 
         try (var input = file.getInputStream()) {
-            EventTypeService.ImportResult result = eventTypeService.importFromCsv(input);
+            EventTypeService.ImportResult result = eventTypeService.importFromSql(input);
             ra.addFlashAttribute("notice",
                     String.format(
                             "Импорт выполнен: обработано %d, создано %d, обновлено %d, пропущено %d",

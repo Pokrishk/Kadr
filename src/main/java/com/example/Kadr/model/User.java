@@ -49,7 +49,6 @@ public class User {
         if (createdAt == null) createdAt = OffsetDateTime.now();
     }
 
-    //Не из БД, чисто для регистрации
     @Transient
     @NotBlank(groups = ValidationGroups.OnRegister.class, message = "Пароль обязателен")
     @Size(min = 8, groups = ValidationGroups.OnRegister.class, message = "Пароль минимум 8 символов")

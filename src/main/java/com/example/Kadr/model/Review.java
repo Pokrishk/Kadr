@@ -32,7 +32,7 @@ public class Review {
     private Integer rating;
 
     @NotBlank
-    @Size(max = 1000) // ← добавили серверный лимит текста
+    @Size(max = 1000)
     @Column(name = "body", nullable = false, columnDefinition = "text")
     private String body;
 

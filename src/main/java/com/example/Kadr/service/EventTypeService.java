@@ -13,12 +13,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -42,96 +42,92 @@ public class EventTypeService {
     public List<EventType> findAll() { return eventTypeRepository.findAll(); }
 
     @Transactional
-    public ImportResult importFromCsv(InputStream inputStream) {
+    public ImportResult importFromSql(InputStream inputStream) {
         if (inputStream == null) {
             throw new IllegalArgumentException("Файл не может быть пустым");
         }
 
-        try (var reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            boolean firstLine = true;
-            boolean headerChecked = false;
+        try (InputStream in = inputStream) {
+            String sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            sql = stripBom(sql);
+            sql = stripSqlComments(sql);
+
+            List<String> statements = splitStatements(sql);
+            if (statements.isEmpty()) {
+                throw new IllegalArgumentException("Файл должен содержать оператор INSERT INTO event_types");
+            }
             int created = 0;
             int updated = 0;
             int skipped = 0;
             int processed = 0;
             Set<String> seen = new HashSet<>();
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (firstLine) {
-                    line = removeBom(line);
-                    firstLine = false;
-                }
-                if (line == null) {
-                    continue;
-                }
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("sep=")) {
-                    continue;
+            for (String statement : statements) {
+                String normalized = statement.toLowerCase(Locale.ROOT).trim();
+                if (!normalized.startsWith("insert into event_types")) {
+                    throw new IllegalArgumentException("Разрешены только INSERT INTO event_types");
                 }
 
-                List<String> cells = splitCsvLine(trimmed);
-                if (cells.isEmpty()) {
-                    skipped++;
-                    continue;
+                ParsedInsert insert = parseInsert(statement);
+                int titleIndex = findColumnIndex(insert.columns(), "title");
+                if (titleIndex < 0) {
+                    throw new IllegalArgumentException("В операторе INSERT должен присутствовать столбец title");
                 }
+                int descriptionIndex = findColumnIndex(insert.columns(), "description");
 
-                if (!headerChecked) {
-                    headerChecked = true;
-                    if (isHeaderRow(cells)) {
+                for (List<String> row : insert.rows()) {
+                    String rawTitle = row.get(titleIndex);
+                    if (rawTitle == null) {
+                        skipped++;
                         continue;
                     }
-                }
-
-                String rawTitle = cells.get(0) != null ? cells.get(0).trim() : "";
-                if (rawTitle.isBlank()) {
-                    skipped++;
-                    continue;
-                }
-                if (rawTitle.length() > 150) {
-                    skipped++;
-                    continue;
-                }
-
-                String normalizedKey = rawTitle.toLowerCase(Locale.ROOT);
-                if (!seen.add(normalizedKey)) {
-                    skipped++;
-                    continue;
-                }
-
-                String description = cells.size() > 1
-                        ? cells.stream()
-                        .skip(1)
-                        .map(val -> val == null ? "" : val.trim())
-                        .filter(val -> !val.isEmpty())
-                        .collect(Collectors.joining(" "))
-                        : null;
-                if (description != null && description.isBlank()) {
-                    description = null;
-                }
-
-                String title = rawTitle.trim();
-                var existingOpt = eventTypeRepository.findByTitleIgnoreCase(title);
-                if (existingOpt.isPresent()) {
-                    EventType existing = existingOpt.get();
-                    boolean changed = !Objects.equals(existing.getDescription(), description)
-                            || !Objects.equals(existing.getTitle(), title);
-                    if (changed) {
-                        existing.setTitle(title);
-                        existing.setDescription(description);
-                        eventTypeRepository.save(existing);
-                        updated++;
-                        processed++;
-                    } else {
+                    String title = rawTitle.trim();
+                    if (title.isEmpty() || title.length() > 150) {
                         skipped++;
+                        continue;
                     }
-                } else {
-                    EventType type = new EventType();
-                    type.setTitle(title);
-                    type.setDescription(description);
-                    eventTypeRepository.save(type);
-                    created++;
-                    processed++;
+                    String key = title.toLowerCase(Locale.ROOT);
+                    if (!seen.add(key)) {
+                        skipped++;
+                        continue;
+                    }
+                    String description = null;
+                    if (descriptionIndex >= 0) {
+                        String rawDescription = row.get(descriptionIndex);
+                        if (rawDescription != null) {
+                            description = rawDescription.trim();
+                            if (description.isEmpty()) {
+                                description = null;
+                            }
+                        }
+                    }
+                    var existingOpt = eventTypeRepository.findByTitleIgnoreCase(title);
+                    if (existingOpt.isPresent()) {
+                        EventType existing = existingOpt.get();
+                        boolean changed = !Objects.equals(existing.getDescription(), description)
+                                || !Objects.equals(existing.getTitle(), title);
+                        if (changed) {
+                            existing.setTitle(title);
+                            existing.setDescription(description);
+                            eventTypeRepository.save(existing);
+                            updated++;
+                            processed++;
+                        } else {
+                            EventType type = new EventType();
+                            type.setTitle(title);
+                            type.setDescription(description);
+                            eventTypeRepository.save(type);
+                            created++;
+                            processed++;
+                        }
+                    } else {
+                        EventType type = new EventType();
+                        type.setTitle(title);
+                        type.setDescription(description);
+                        eventTypeRepository.save(type);
+                        created++;
+                        processed++;
+                    }
                 }
             }
 
@@ -146,53 +142,199 @@ public class EventTypeService {
 
             return new ImportResult(processed, created, updated, skipped);
         } catch (IOException ex) {
-            throw new IllegalArgumentException("Не удалось прочитать CSV: " + ex.getMessage(), ex);
+            throw new IllegalArgumentException("Не удалось прочитать SQL: " + ex.getMessage(), ex);
         }
     }
 
     public record ImportResult(int processed, int created, int updated, int skipped) { }
 
-    private String removeBom(String line) {
-        if (line != null && !line.isEmpty() && line.charAt(0) == '\uFEFF') {
-            return line.substring(1);
+    private ParsedInsert parseInsert(String statement) {
+        String trimmed = statement.trim();
+        if (trimmed.endsWith(";")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
-        return line;
+        Matcher matcher = INSERT_PATTERN.matcher(trimmed);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Не удалось разобрать оператор INSERT INTO event_types");
+        }
+
+        List<String> columns = parseColumns(matcher.group(1));
+        if (columns.isEmpty()) {
+            throw new IllegalArgumentException("Не указаны столбцы для вставки");
+        }
+
+        String valuesPart = matcher.group(2).trim();
+        List<List<String>> rows = parseValueRows(valuesPart, columns.size());
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("Не найдены значения для вставки");
+        }
+
+        return new ParsedInsert(columns, rows);
     }
 
-    private boolean isHeaderRow(List<String> cells) {
-        if (cells.isEmpty()) {
-            return false;
-        }
-        String first = cells.get(0) != null ? cells.get(0).trim().toLowerCase(Locale.ROOT) : "";
-        return first.equals("title") || first.equals("название");
+    private List<String> parseColumns(String columnsRaw) {
+        return Arrays.stream(columnsRaw.split(","))
+                .map(col -> col.replace("`", "").replace("\"", "").trim())
+                .filter(col -> !col.isEmpty())
+                .collect(Collectors.toList());
     }
 
-    private List<String> splitCsvLine(String line) {
-        List<String> result = new ArrayList<>();
-        if (line == null) {
-            return result;
-        }
-        char delimiter = line.indexOf(';') >= 0 ? ';' : ',';
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-
-        for (int i = 0; i < line.length(); i++) {
-            char ch = line.charAt(i);
-            if (ch == '"') {
-                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                    current.append('"');
+    private List<List<String>> parseValueRows(String valuesPart, int columnCount) {
+        List<List<String>> rows = new ArrayList<>();
+        int len = valuesPart.length();
+        int i = 0;
+        while (i < len) {
+            while (i < len && Character.isWhitespace(valuesPart.charAt(i))) i++;
+            if (i >= len) {
+                break;
+            }
+            if (valuesPart.charAt(i) != '(') {
+                throw new IllegalArgumentException("Ожидалась '(' перед списком значений");
+            }
+            i++;
+            List<String> row = new ArrayList<>(columnCount);
+            StringBuilder current = new StringBuilder();
+            boolean inString = false;
+            boolean valueIsString = false;
+            while (i < len) {
+                char ch = valuesPart.charAt(i);
+                if (inString) {
+                    if (ch == '\'') {
+                        if (i + 1 < len && valuesPart.charAt(i + 1) == '\'') {
+                            current.append('\'');
+                            i += 2;
+                            continue;
+                        }
+                        inString = false;
+                        i++;
+                        continue;
+                    }
+                    current.append(ch);
                     i++;
-                } else {
-                    inQuotes = !inQuotes;
+                    continue;
                 }
-            } else if (!inQuotes && ch == delimiter) {
-                result.add(current.toString());
-                current.setLength(0);
-            } else {
+
+                if (ch == '\'') {
+                    inString = true;
+                    valueIsString = true;
+                    i++;
+                    continue;
+                }
+                if (ch == ',') {
+                    row.add(convertSqlValue(current, valueIsString));
+                    current.setLength(0);
+                    valueIsString = false;
+                    i++;
+                    continue;
+                }
+                if (ch == ')') {
+                    row.add(convertSqlValue(current, valueIsString));
+                    current.setLength(0);
+                    valueIsString = false;
+                    i++;
+                    break;
+                }
                 current.append(ch);
+                i++;
+            }
+
+            if (row.size() != columnCount) {
+                throw new IllegalArgumentException("Количество значений не совпадает с количеством столбцов");
+            }
+            rows.add(row);
+
+            while (i < len && Character.isWhitespace(valuesPart.charAt(i))) i++;
+            if (i < len && valuesPart.charAt(i) == ',') {
+                i++;
             }
         }
-        result.add(current.toString());
-        return result;
+        return rows;
     }
+
+    private String convertSqlValue(CharSequence token, boolean isString) {
+        if (isString) {
+            return token.toString();
+        }
+        String raw = token.toString().trim();
+        if (raw.isEmpty() || raw.equalsIgnoreCase("null")) {
+            return null;
+        }
+        if (raw.startsWith("\'") && raw.endsWith("\'") && raw.length() >= 2) {
+            return raw.substring(1, raw.length() - 1);
+        }
+        return raw;
+    }
+
+    private int findColumnIndex(List<String> columns, String name) {
+        for (int i = 0; i < columns.size(); i++) {
+            if (columns.get(i).equalsIgnoreCase(name)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private String stripBom(String text) {
+        if (text != null && !text.isEmpty() && text.charAt(0) == '\uFEFF') {
+            return text.substring(1);
+        }
+        return text;
+    }
+
+    private String stripSqlComments(String sql) {
+        if (sql == null || sql.isEmpty()) {
+            return "";
+        }
+        String noBlock = sql.replaceAll("(?s)/\\*.*?\\*/", " ");
+        return noBlock.replaceAll("(?m)^\\s*--.*$", " ");
+    }
+
+    private List<String> splitStatements(String sql) {
+        List<String> statements = new ArrayList<>();
+        if (sql == null) {
+            return statements;
+        }
+        StringBuilder current = new StringBuilder();
+        boolean inString = false;
+        for (int i = 0; i < sql.length(); i++) {
+            char ch = sql.charAt(i);
+            if (inString) {
+                if (ch == '\'') {
+                    if (i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+                        current.append('\'');
+                        i++;
+                    } else {
+                        inString = false;
+                        current.append(ch);
+                    }
+                } else {
+                    current.append(ch);
+                }
+            } else {
+                if (ch == '\'') {
+                    inString = true;
+                    current.append(ch);
+                } else if (ch == ';') {
+                    String stmt = current.toString().trim();
+                    if (!stmt.isEmpty()) {
+                        statements.add(stmt);
+                    }
+                    current.setLength(0);
+                } else {
+                    current.append(ch);
+                }
+            }
+        }
+        String tail = current.toString().trim();
+        if (!tail.isEmpty()) {
+            statements.add(tail);
+        }
+        return statements;
+    }
+    private record ParsedInsert(List<String> columns, List<List<String>> rows) { }
+
+    private static final Pattern INSERT_PATTERN = Pattern.compile(
+            "^insert\\s+into\\s+event_types\\s*\\(([^)]+)\\)\\s*values\\s*(.+)$",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
 }
