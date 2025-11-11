@@ -29,6 +29,26 @@ public class ProfileController {
         return "profile";
     }
 
+    @PostMapping("/profile/settings")
+    public String updatePreferences(@AuthenticationPrincipal UserDetails principal,
+                                    @RequestParam("theme") String theme,
+                                    @RequestParam("dateFormat") String dateFormat,
+                                    @RequestParam("numberFormat") String numberFormat,
+                                    @RequestParam("pageSize") Integer pageSize,
+                                    @RequestParam(value = "savedFilters", required = false) String savedFilters,
+                                    RedirectAttributes ra) {
+        if (principal == null) return "redirect:/login";
+        User user = users.findByUsername(principal.getUsername()).orElseThrow();
+        try {
+            profileService.updatePreferences(user, theme, dateFormat, numberFormat, pageSize, savedFilters);
+            ra.addFlashAttribute("ok", "Настройки интерфейса обновлены");
+        } catch (IllegalArgumentException ex) {
+            ra.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/profile#preferences";
+        }
+        return "redirect:/profile";
+    }
+
     @PostMapping("/profile/username")
     public String updateUsername(@AuthenticationPrincipal UserDetails principal,
                                  @RequestParam("username") String username,

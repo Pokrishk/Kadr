@@ -5,6 +5,9 @@ import com.example.Kadr.model.Organizer;
 import com.example.Kadr.model.User;
 import com.example.Kadr.repository.OrganizerRepository;
 import com.example.Kadr.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.validation.Validator;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -25,6 +29,13 @@ public class ProfileService {
     private final Validator validator;
     private final OrganizerRepository organizers;
     private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
+
+    private static final Set<String> ALLOWED_THEMES = Set.of("light", "dark", "system");
+    private static final Set<String> ALLOWED_DATE_FORMATS =
+            Set.of("dd.MM.yyyy", "MM/dd/yyyy", "yyyy-MM-dd");
+    private static final Set<String> ALLOWED_NUMBER_FORMATS = Set.of("comma", "dot");
+    private static final Set<Integer> ALLOWED_PAGE_SIZES = Set.of(10, 20, 50);
 
     private void verifyPassword(User user, String raw) {
         if (raw == null || !passwordEncoder.matches(raw, user.getPasswordHash())) {
@@ -129,5 +140,68 @@ public class ProfileService {
                 String.format("Создан организатор ID=%d для пользователя %s", saved.getId(), user.getUsername())
         );
         return saved;
+    }
+
+    @Transactional
+    public void updatePreferences(User user,
+                                  String theme,
+                                  String dateFormat,
+                                  String numberFormat,
+                                  Integer pageSize,
+                                  String savedFilters) {
+        if (!ALLOWED_THEMES.contains(theme)) {
+            throw new IllegalArgumentException("Некорректная тема интерфейса");
+        }
+        if (!ALLOWED_DATE_FORMATS.contains(dateFormat)) {
+            throw new IllegalArgumentException("Некорректный формат даты");
+        }
+        if (!ALLOWED_NUMBER_FORMATS.contains(numberFormat)) {
+            throw new IllegalArgumentException("Некорректный формат чисел");
+        }
+        if (pageSize == null || !ALLOWED_PAGE_SIZES.contains(pageSize)) {
+            throw new IllegalArgumentException("Некорректный размер страниц");
+        }
+
+        String normalizedFilters = savedFilters == null ? "[]" : savedFilters.trim();
+        if (normalizedFilters.isEmpty()) {
+            normalizedFilters = "[]";
+        }
+        if (normalizedFilters.length() > 10_000) {
+            throw new IllegalArgumentException("Слишком большой объём сохранённых фильтров");
+        }
+
+        try {
+            JsonNode filtersNode = objectMapper.readTree(normalizedFilters);
+            if (!filtersNode.isArray()) {
+                throw new IllegalArgumentException("Сохранённые фильтры должны быть массивом");
+            }
+            normalizedFilters = objectMapper.writeValueAsString(filtersNode);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalArgumentException("Некорректный формат сохранённых фильтров");
+        }
+
+        Map<String, Object> previous = Map.of(
+                "theme", user.getTheme(),
+                "dateFormat", user.getDateFormat(),
+                "numberFormat", user.getNumberFormat(),
+                "pageSize", user.getPageSize(),
+                "savedFilters", user.getSavedFilters()
+        );
+
+        user.setTheme(theme);
+        user.setDateFormat(dateFormat);
+        user.setNumberFormat(numberFormat);
+        user.setPageSize(pageSize);
+        user.setSavedFilters(normalizedFilters);
+        users.save(user);
+
+        auditLogService.log(
+                AuditAction.UPDATE,
+                "users",
+                String.format(
+                        "Обновлены пользовательские настройки ID=%d (было: %s)",
+                        user.getId(), previous
+                )
+        );
     }
 }

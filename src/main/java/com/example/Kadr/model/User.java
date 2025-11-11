@@ -44,9 +44,35 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @Builder.Default
+    @Column(name = "theme", nullable = false, length = 20)
+    private String theme = "system";
+
+    @Builder.Default
+    @Column(name = "date_format", nullable = false, length = 32)
+    private String dateFormat = "dd.MM.yyyy";
+
+    @Builder.Default
+    @Column(name = "number_format", nullable = false, length = 20)
+    private String numberFormat = "comma";
+
+    @Builder.Default
+    @Column(name = "page_size", nullable = false)
+    private Integer pageSize = 20;
+
+    @Builder.Default
+    @Lob
+    @Column(name = "saved_filters", nullable = false, columnDefinition = "text")
+    private String savedFilters = "[]";
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = OffsetDateTime.now();
+        if (theme == null || theme.isBlank()) theme = "system";
+        if (dateFormat == null || dateFormat.isBlank()) dateFormat = "dd.MM.yyyy";
+        if (numberFormat == null || numberFormat.isBlank()) numberFormat = "comma";
+        if (pageSize == null || pageSize < 1) pageSize = 20;
+        if (savedFilters == null || savedFilters.isBlank()) savedFilters = "[]";
     }
 
     @Transient

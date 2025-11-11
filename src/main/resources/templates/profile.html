@@ -42,6 +42,64 @@
         <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
         <div th:if="${ok}" class="alert alert-ok" th:text="${ok}"></div>
     </section>
+
+    <section class="card" id="preferences">
+        <div class="section-title">
+            <h2>Настройки интерфейса</h2>
+        </div>
+
+        <form th:action="@{/profile/settings}" method="post" class="ui-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <div class="ui-field">
+                <label class="ui-label">Тема</label>
+                <select class="ui-input" name="theme">
+                    <option value="system" th:selected="${user.theme == 'system'}">Как в системе</option>
+                    <option value="light" th:selected="${user.theme == 'light'}">Светлая</option>
+                    <option value="dark" th:selected="${user.theme == 'dark'}">Тёмная</option>
+                </select>
+                <small class="muted">Выберите оформление сайта по умолчанию.</small>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label">Формат даты</label>
+                <select class="ui-input" name="dateFormat">
+                    <option value="dd.MM.yyyy" th:selected="${user.dateFormat == 'dd.MM.yyyy'}">31.12.2024</option>
+                    <option value="MM/dd/yyyy" th:selected="${user.dateFormat == 'MM/dd/yyyy'}">12/31/2024</option>
+                    <option value="yyyy-MM-dd" th:selected="${user.dateFormat == 'yyyy-MM-dd'}">2024-12-31</option>
+                </select>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label">Формат чисел</label>
+                <select class="ui-input" name="numberFormat">
+                    <option value="comma" th:selected="${user.numberFormat == 'comma'}">1 234,56</option>
+                    <option value="dot" th:selected="${user.numberFormat == 'dot'}">1,234.56</option>
+                </select>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label">Размер страниц</label>
+                <select class="ui-input" name="pageSize">
+                    <option value="10" th:selected="${user.pageSize == 10}">10 элементов</option>
+                    <option value="20" th:selected="${user.pageSize == 20}">20 элементов</option>
+                    <option value="50" th:selected="${user.pageSize == 50}">50 элементов</option>
+                </select>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label">Сохранённые фильтры (JSON)</label>
+                <textarea class="ui-input" name="savedFilters" rows="4"
+                          placeholder='[{"type":"cinema"}]'
+                          th:text="${user.savedFilters}"></textarea>
+                <small class="muted">Фильтры сохраняются на сервере и применяются при входе.</small>
+            </div>
+
+            <div class="ui-actions">
+                <button type="submit" class="btn">Сохранить настройки</button>
+            </div>
+        </form>
+    </section>
 </main>
 
 <dialog id="dlg-username">
