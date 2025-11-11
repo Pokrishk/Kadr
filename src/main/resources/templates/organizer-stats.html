@@ -28,7 +28,8 @@
                 <a class="btn" th:href="@{/organizer/events/new}">+ Добавить событие</a>
             </div>
         </div>
-        <form class="ui-form-inline stats-filter" th:action="@{/organizer/stats}" method="get">
+        <form class="ui-form-inline stats-filter" th:action="@{/organizer/stats}" method="get"
+              data-filters-panel data-filters-key="organizer_stats">
             <div class="ui-field">
                 <label class="ui-label" for="fromDate">Период с</label>
                 <input class="ui-input" type="date" id="fromDate" name="from" th:value="${from}">

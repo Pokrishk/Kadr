@@ -6,12 +6,15 @@ import com.example.Kadr.service.EventService;
 import com.example.Kadr.service.EventTypeService;
 import com.example.Kadr.service.OrganizerService;
 import com.example.Kadr.service.ReviewService;
+import com.example.Kadr.service.UserSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,11 +29,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 
@@ -42,6 +47,7 @@ public class MainController {
     private final EventService eventService;
     private final ReviewService reviewService;
     private final OrganizerService organizerService;
+    private final UserSettingsService userSettingsService;
     private final TicketRepository ticketRepository;
 
     @GetMapping
@@ -86,12 +92,57 @@ public class MainController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime timeFrom,
             @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime timeTo,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size,
-            @RequestParam(defaultValue = "asc") String sort,
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "sort", required = false) String sort,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletRequest request,
             Model model
     ) {
+        var userSettings = principal == null ? null
+                : userSettingsService.ensureSettingsForUsername(principal.getUsername());
+
+        var params = request.getParameterMap();
+        if (userSettings != null) {
+            var saved = userSettingsService.getSavedFilters(userSettings, "catalog");
+            if (saved != null) {
+                if (!params.containsKey("q") && saved.hasNonNull("q")) {
+                    q = saved.get("q").asText();
+                }
+                if (!params.containsKey("typeId") && saved.hasNonNull("typeId") && saved.get("typeId").canConvertToLong()) {
+                    typeId = saved.get("typeId").asLong();
+                }
+                if (!params.containsKey("organizerId") && saved.hasNonNull("organizerId") && saved.get("organizerId").canConvertToLong()) {
+                    organizerId = saved.get("organizerId").asLong();
+                }
+                if (!params.containsKey("dateFrom") && saved.hasNonNull("dateFrom")) {
+                    dateFrom = parseDate(saved.get("dateFrom").asText());
+                }
+                if (!params.containsKey("dateTo") && saved.hasNonNull("dateTo")) {
+                    dateTo = parseDate(saved.get("dateTo").asText());
+                }
+                if (!params.containsKey("timeFrom") && saved.hasNonNull("timeFrom")) {
+                    timeFrom = parseTime(saved.get("timeFrom").asText());
+                }
+                if (!params.containsKey("timeTo") && saved.hasNonNull("timeTo")) {
+                    timeTo = parseTime(saved.get("timeTo").asText());
+                }
+                if (!params.containsKey("sort") && saved.hasNonNull("sort")) {
+                    sort = saved.get("sort").asText();
+                }
+                if (!params.containsKey("size") && saved.hasNonNull("size") && saved.get("size").isInt()) {
+                    size = saved.get("size").asInt();
+                }
+            }
+        }
+
+        if (sort == null || sort.isBlank()) {
+            sort = "asc";
+        }
+
+        int effectiveSize = (size != null && size > 0) ? size
+                : userSettings != null ? userSettings.getPageSize() : 20;
         Page<Event> events = eventService.search(
-                q, typeId, organizerId, dateFrom, dateTo, timeFrom, timeTo, page, size, sort
+                q, typeId, organizerId, dateFrom, dateTo, timeFrom, timeTo, page, effectiveSize, sort
         );
 
         model.addAttribute("events", events);
@@ -106,7 +157,7 @@ public class MainController {
         model.addAttribute("timeFrom", timeFrom);
         model.addAttribute("timeTo", timeTo);
         model.addAttribute("sort", sort);
-        model.addAttribute("size", size);
+        model.addAttribute("size", effectiveSize);
 
         return "events";
     }
@@ -200,6 +251,28 @@ public class MainController {
             parts.add(String.join(", ", streetParts));
         }
         return String.join(", ", parts);
+    }
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private LocalTime parseTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(value);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
     }
 
     private String escapeCsv(String value) {

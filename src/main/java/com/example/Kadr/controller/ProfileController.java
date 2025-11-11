@@ -3,6 +3,7 @@ package com.example.Kadr.controller;
 import com.example.Kadr.model.User;
 import com.example.Kadr.repository.UserRepository;
 import com.example.Kadr.service.ProfileService;
+import com.example.Kadr.service.UserSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,12 +14,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequiredArgsConstructor
 public class ProfileController {
 
     private final UserRepository users;
     private final ProfileService profileService;
+    private final UserSettingsService userSettingsService;
 
     @GetMapping("/profile")
     public String profilePage(@AuthenticationPrincipal UserDetails principal, Model model) {
@@ -26,6 +30,10 @@ public class ProfileController {
         User user = users.findByUsername(principal.getUsername()).orElseThrow();
         model.addAttribute("user", user);
         model.addAttribute("hasOrganizer", profileService.hasOrganizer(user));
+        model.addAttribute("settings", userSettingsService.ensureSettingsForUser(user));
+        model.addAttribute("themeOptions", userSettingsService.getThemeOptions());
+        model.addAttribute("fontOptions", userSettingsService.getFontOptions());
+        model.addAttribute("pageSizeOptions", List.of(10, 20, 50, 100));
         return "profile";
     }
 
@@ -95,5 +103,24 @@ public class ProfileController {
             return "redirect:/profile#new-organizer";
         }
         return "redirect:/profile";
+    }
+
+    @PostMapping("/profile/settings")
+    public String updateSettings(@AuthenticationPrincipal UserDetails principal,
+                                 @RequestParam("theme") String theme,
+                                 @RequestParam("fontFamily") String fontFamily,
+                                 @RequestParam("fontSize") Integer fontSize,
+                                 @RequestParam("pageSize") Integer pageSize,
+                                 RedirectAttributes ra) {
+        if (principal == null) return "redirect:/login";
+        User user = users.findByUsername(principal.getUsername()).orElseThrow();
+        try {
+            userSettingsService.updatePreferences(user, theme, fontFamily, fontSize, pageSize);
+            ra.addFlashAttribute("ok", "Настройки профиля обновлены");
+        } catch (IllegalArgumentException ex) {
+            ra.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/profile#display-settings";
+        }
+        return "redirect:/profile#display-settings";
     }
 }

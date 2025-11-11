@@ -8,6 +8,7 @@ import com.example.Kadr.repository.EventTypeRepository;
 import com.example.Kadr.repository.TicketRepository;
 import com.example.Kadr.service.EventService;
 import com.example.Kadr.service.OrganizerService;
+import com.example.Kadr.service.UserSettingsService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Row;
@@ -28,6 +29,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Controller
 @RequiredArgsConstructor
@@ -39,21 +43,28 @@ public class OrganizerController {
     private final AddressRepository addressRepository;
     private final EventTypeRepository eventTypeRepository;
     private final TicketRepository ticketRepository;
+    private final UserSettingsService userSettingsService;
+
 
     @GetMapping("/panel")
     public String panel(@RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "12") int size,
+                        @RequestParam(value = "size", required = false) Integer size,
                         @RequestParam(defaultValue = "desc") String sort,
+                        @AuthenticationPrincipal UserDetails principal,
                         Model model) {
 
         Organizer org = organizerService.getCurrentOrganizerOrThrow();
+        var userSettings = principal == null ? null
+                : userSettingsService.ensureSettingsForUsername(principal.getUsername());
+        int effectiveSize = (size != null && size > 0) ? size
+                : userSettings != null ? userSettings.getPageSize() : 20;
         Page<com.example.Kadr.model.Event> events =
-                eventService.listForOrganizer(org.getId(), page, size, sort);
+                eventService.listForOrganizer(org.getId(), page, effectiveSize, sort);
 
         model.addAttribute("organizer", org);
         model.addAttribute("events", events);
         model.addAttribute("page", page);
-        model.addAttribute("size", size);
+        model.addAttribute("size", effectiveSize);
         model.addAttribute("sort", sort);
         return "organizer-panel";
     }
@@ -65,9 +76,25 @@ public class OrganizerController {
                         @RequestParam(value = "to", required = false)
                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                         LocalDate to,
+                        @AuthenticationPrincipal UserDetails principal,
+                        HttpServletRequest request,
                         Model model) {
         Organizer org = organizerService.getCurrentOrganizerOrThrow();
         Long orgId = org.getId();
+
+        if (principal != null) {
+            var settings = userSettingsService.ensureSettingsForUsername(principal.getUsername());
+            var params = request.getParameterMap();
+            var saved = userSettingsService.getSavedFilters(settings, "organizer_stats");
+            if (saved != null) {
+                if (!params.containsKey("from") && saved.hasNonNull("from")) {
+                    from = parseDate(saved.get("from").asText());
+                }
+                if (!params.containsKey("to") && saved.hasNonNull("to")) {
+                    to = parseDate(saved.get("to").asText());
+                }
+            }
+        }
 
         var range = normalizeRange(from, to);
         model.addAttribute("from", from);
@@ -81,6 +108,16 @@ public class OrganizerController {
         model.addAttribute("statsAvgRatingByType",           eventService.statsAvgRatingByType(orgId, range.from(), range.to()));
 
         return "organizer-stats";
+    }
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     @GetMapping("/events/new")

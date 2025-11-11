@@ -38,7 +38,12 @@
             </nav>
         </div>
     </header>
+    <script th:inline="javascript">
+        window.__userSettings = /*[[${userSettingsView}]]*/ null;
+        window.__userFontStacks = /*[[${userFontStacks}]]*/ {};
+    </script>
     <script defer th:src="@{/js/hotkeys.js}"></script>
+    <script defer th:src="@{/js/user-settings.js}"></script>
 </th:block>
 </body>
 </html>

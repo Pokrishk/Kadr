@@ -14,11 +14,14 @@ public class AuthService {
     private final UserRepository users;
     private final RoleRepository roles;
     private final Validator validator;
+    private final UserSettingsService userSettingsService;
 
-    public AuthService(UserRepository users, RoleRepository roles, Validator validator) {
+    public AuthService(UserRepository users, RoleRepository roles, Validator validator,
+                       UserSettingsService userSettingsService) {
         this.users = users;
         this.roles = roles;
         this.validator = validator;
+        this.userSettingsService = userSettingsService;
     }
 
     public boolean usernameExists(String username) { return users.findByUsername(username).isPresent(); }
@@ -41,6 +44,8 @@ public class AuthService {
             throw new IllegalArgumentException("Данные перед сохранением невалидны: " + violations);
         }
 
-        return users.save(toSave);
+        User saved = users.save(toSave);
+        userSettingsService.ensureSettingsForUser(saved);
+        return saved;
     }
 }

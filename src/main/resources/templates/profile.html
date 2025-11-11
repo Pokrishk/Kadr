@@ -42,6 +42,59 @@
         <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
         <div th:if="${ok}" class="alert alert-ok" th:text="${ok}"></div>
     </section>
+    <section class="card" id="display-settings">
+        <div class="section-title">
+            <h2>Настройки отображения</h2>
+        </div>
+
+        <form class="ui-form" th:action="@{/profile/settings}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <div class="ui-field">
+                <label class="ui-label" for="theme">Тема оформления</label>
+                <select class="ui-input" id="theme" name="theme">
+                    <option th:each="opt : ${themeOptions}"
+                            th:value="${opt.value()}"
+                            th:text="${opt.label()}"
+                            th:selected="${settings.theme == opt.value()}"></option>
+                </select>
+                <small class="muted">"Системная" использует настройки операционной системы.</small>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="fontFamily">Семейство шрифтов</label>
+                <select class="ui-input" id="fontFamily" name="fontFamily">
+                    <option th:each="opt : ${fontOptions}"
+                            th:value="${opt.value()}"
+                            th:text="${opt.label()}"
+                            th:selected="${settings.fontFamily == opt.value()}"></option>
+                </select>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="fontSize">Размер шрифта</label>
+                <input class="ui-input" type="number" id="fontSize" name="fontSize"
+                       min="10" max="24" step="1"
+                       th:value="${settings.fontSize}">
+                <small class="muted">От 10 до 24 пунктов.</small>
+            </div>
+
+            <div class="ui-field">
+                <label class="ui-label" for="pageSize">Размер страниц списков</label>
+                <select class="ui-input" id="pageSize" name="pageSize">
+                    <option th:each="sizeOption : ${pageSizeOptions}"
+                            th:value="${sizeOption}"
+                            th:text="${sizeOption}"
+                            th:selected="${settings.pageSize == sizeOption}"></option>
+                </select>
+                <small class="muted">Применяется к спискам, поддерживающим пагинацию.</small>
+            </div>
+
+            <div class="ui-actions" style="justify-content:flex-end; margin-top:14px;">
+                <button type="submit" class="btn">Сохранить настройки</button>
+            </div>
+        </form>
+    </section>
 </main>
 
 <dialog id="dlg-username">
