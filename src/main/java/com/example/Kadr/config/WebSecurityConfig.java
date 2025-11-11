@@ -1,6 +1,10 @@
 package com.example.Kadr.config;
 
 import com.example.Kadr.service.AppUserDetailsService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -9,7 +13,14 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+
+import java.io.IOException;
 
 import static org.springframework.http.HttpMethod.*;
 
@@ -19,6 +30,8 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        var requestHandler = new CsrfTokenRequestAttributeHandler();
+        var cookieRepo = CookieCsrfTokenRepository.withHttpOnlyFalse();
         http
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
                         "/api/**",
@@ -57,6 +70,16 @@ public class WebSecurityConfig {
                         .permitAll()
                 )
                 .exceptionHandling(e -> e.accessDeniedPage("/access-denied"));
+
+        http.addFilterAfter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+                    throws ServletException, IOException {
+                CsrfToken csrf = (CsrfToken) req.getAttribute(CsrfToken.class.getName());
+                if (csrf != null) { csrf.getToken(); }
+                chain.doFilter(req, res);
+            }
+        }, BasicAuthenticationFilter.class);
 
         return http.build();
     }
