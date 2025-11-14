@@ -1,0 +1,17 @@
+# Maven build output
+/target
+
+# Git metadata
+.git
+.gitignore
+
+# Maven wrapper binaries
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea
+*.iml
+.vscode
+
+# OS artifacts
+.DS_Store

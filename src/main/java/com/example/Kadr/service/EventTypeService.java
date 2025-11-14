@@ -61,6 +61,16 @@ public class EventTypeService {
             int skipped = 0;
             int processed = 0;
             Set<String> seen = new HashSet<>();
+            Map<String, EventType> existingByTitle = eventTypeRepository.findAll().stream()
+                    .filter(type -> type.getTitle() != null)
+                    .map(type -> Map.entry(type.getTitle().trim(), type))
+                    .filter(entry -> !entry.getKey().isEmpty())
+                    .collect(Collectors.toMap(
+                            entry -> entry.getKey().toLowerCase(Locale.ROOT),
+                            Map.Entry::getValue,
+                            (left, right) -> left,
+                            HashMap::new
+                    ));
 
             for (String statement : statements) {
                 String normalized = statement.toLowerCase(Locale.ROOT).trim();
@@ -101,30 +111,27 @@ public class EventTypeService {
                             }
                         }
                     }
-                    var existingOpt = eventTypeRepository.findByTitleIgnoreCase(title);
-                    if (existingOpt.isPresent()) {
-                        EventType existing = existingOpt.get();
+                    EventType existing = existingByTitle.get(key);
+                    if (existing != null) {
                         boolean changed = !Objects.equals(existing.getDescription(), description)
                                 || !Objects.equals(existing.getTitle(), title);
                         if (changed) {
                             existing.setTitle(title);
                             existing.setDescription(description);
                             eventTypeRepository.save(existing);
+                            existingByTitle.put(key, existing);
                             updated++;
                             processed++;
                         } else {
-                            EventType type = new EventType();
-                            type.setTitle(title);
-                            type.setDescription(description);
-                            eventTypeRepository.save(type);
-                            created++;
-                            processed++;
+                            skipped++;
+                            continue;
                         }
                     } else {
                         EventType type = new EventType();
                         type.setTitle(title);
                         type.setDescription(description);
-                        eventTypeRepository.save(type);
+                        EventType saved = eventTypeRepository.save(type);
+                        existingByTitle.put(key, saved);
                         created++;
                         processed++;
                     }
