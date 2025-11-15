@@ -291,6 +291,9 @@ public class AdminController {
         if (!br.hasFieldErrors("username") && adminService.usernameExists(user.getUsername(), userId)) {
             br.rejectValue("username", "username.exists", "Логин уже занят");
         }
+        if (!br.hasFieldErrors("email") && User.containsDisallowedSymbols(user.getEmail())) {
+            br.rejectValue("email", "email.invalidChars", "Email не должен содержать эмодзи или спецсимволы");
+        }
         if (!br.hasFieldErrors("email") && adminService.emailExists(user.getEmail(), userId)) {
             br.rejectValue("email", "email.exists", "Email уже зарегистрирован");
         }
@@ -298,6 +301,9 @@ public class AdminController {
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
             if (user.getPassword().length() < 8) {
                 br.rejectValue("password", "Size", "Пароль минимум 8 символов");
+            }
+            if (!br.hasFieldErrors("password") && User.containsDisallowedSymbols(user.getPassword())) {
+                br.rejectValue("password", "password.invalidChars", "Пароль не должен содержать эмодзи или спецсимволы");
             }
             if (user.getConfirmPassword() == null || user.getConfirmPassword().isBlank()) {
                 br.rejectValue("confirmPassword", "NotBlank", "Подтвердите пароль");

@@ -102,7 +102,11 @@ public class MainController {
                 : userSettingsService.ensureSettingsForUsername(principal.getUsername());
 
         var params = request.getParameterMap();
-        if (userSettings != null) {
+        boolean resetFilters = params.containsKey("reset");
+        if (userSettings != null && resetFilters && principal != null) {
+            userSettingsService.clearFiltersForUsername(principal.getUsername(), "catalog");
+        }
+        if (userSettings != null && !resetFilters) {
             var saved = userSettingsService.getSavedFilters(userSettings, "catalog");
             if (saved != null) {
                 if (!params.containsKey("q") && saved.hasNonNull("q")) {

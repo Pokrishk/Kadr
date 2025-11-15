@@ -101,6 +101,16 @@ public class UserSettingsService {
     }
 
     @Transactional
+    public UserSettings clearFiltersForUsername(String username, String key) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Имя пользователя обязательно для сброса фильтров");
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + username));
+        return clearFilters(user, key);
+    }
+
+    @Transactional
     public UserSettings overwriteFilters(User user, String key, ObjectNode filters) {
         return saveFilters(user, key, filters);
     }

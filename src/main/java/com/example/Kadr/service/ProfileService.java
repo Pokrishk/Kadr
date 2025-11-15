@@ -70,6 +70,9 @@ public class ProfileService {
             if (!u.getId().equals(user.getId())) {
                 throw new IllegalArgumentException("Такой email уже зарегистрирован");
             }
+            if (User.containsDisallowedSymbols(newEmail)) {
+                throw new IllegalArgumentException("Email не должен содержать эмодзи или спецсимволы");
+            }
         });
         user.setEmail(newEmail);
         users.save(user);
@@ -85,6 +88,9 @@ public class ProfileService {
         verifyPassword(user, currentPassword);
         if (newPassword == null || newPassword.length() < 8) {
             throw new IllegalArgumentException("Новый пароль минимум 8 символов");
+        }
+        if (User.containsDisallowedSymbols(newPassword)) {
+            throw new IllegalArgumentException("Пароль не должен содержать эмодзи или спецсимволы");
         }
         if (!newPassword.equals(confirmNewPassword)) {
             throw new IllegalArgumentException("Пароли не совпадают");

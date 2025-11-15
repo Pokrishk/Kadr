@@ -36,7 +36,9 @@
             <div class="ui-field">
                 <label class="ui-label" for="email">Email</label>
                 <input id="email" type="email" class="ui-input" th:classappend="${#fields.hasErrors('email')} ? ' is-invalid'"
-                       th:field="*{email}" placeholder="Email">
+                       th:field="*{email}" placeholder="Email"
+                       pattern="^(?!.*(?:[\u2600-\u27BF]|[\uE000-\uF8FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF])).*$"
+                       title="Без эмодзи и недопустимых символов">
                 <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
             </div>
 
@@ -56,7 +58,10 @@
             <div class="ui-field">
                 <label class="ui-label" for="password">Пароль</label>
                 <input id="password" type="password" class="ui-input" th:classappend="${#fields.hasErrors('password')} ? ' is-invalid'"
-                       th:field="*{password}" placeholder="Пароль">
+                       th:field="*{password}" placeholder="Пароль"
+                       minlength="8"
+                       pattern="^(?!.*(?:[\u2600-\u27BF]|[\uE000-\uF8FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF])).*$"
+                       title="Без эмодзи и недопустимых символов">
                 <div class="field-error" th:if="${mode == 'create'}">Минимум 8 символов</div>
                 <div class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
             </div>
@@ -64,7 +69,10 @@
             <div class="ui-field">
                 <label class="ui-label" for="confirmPassword">Подтверждение пароля</label>
                 <input id="confirmPassword" type="password" class="ui-input" th:classappend="${#fields.hasErrors('confirmPassword')} ? ' is-invalid'"
-                       th:field="*{confirmPassword}" placeholder="Повторите пароль">
+                       th:field="*{confirmPassword}" placeholder="Повторите пароль"
+                       minlength="8"
+                       pattern="^(?!.*(?:[\u2600-\u27BF]|[\uE000-\uF8FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF])).*$"
+                       title="Без эмодзи и недопустимых символов">
                 <div class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
             </div>
 

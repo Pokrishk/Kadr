@@ -85,6 +85,8 @@
                 <span class="ui-label">Страна</span>
                 <input class="ui-input"
                        th:field="*{address.country}"
+                       pattern="[A-Za-zА-Яа-яЁё\- ]+"
+                       title="Только буквы и дефис"
                        th:classappend="${#fields.hasErrors('address.country')} ? ' is-invalid' : ''"
                        required>
                 <div class="field-error" th:if="${#fields.hasErrors('address.country')}" th:errors="*{address.country}"></div>
@@ -93,6 +95,8 @@
                 <span class="ui-label">Город</span>
                 <input class="ui-input"
                        th:field="*{address.city}"
+                       pattern="[A-Za-zА-Яа-яЁё\- ]+"
+                       title="Только буквы и дефис"
                        th:classappend="${#fields.hasErrors('address.city')} ? ' is-invalid' : ''"
                        required>
                 <div class="field-error" th:if="${#fields.hasErrors('address.city')}" th:errors="*{address.city}"></div>
@@ -101,6 +105,8 @@
                 <span class="ui-label">Улица</span>
                 <input class="ui-input"
                        th:field="*{address.street}"
+                       pattern="[0-9A-Za-zА-Яа-яЁё\- ]+"
+                       title="Только буквы, цифры и дефис"
                        th:classappend="${#fields.hasErrors('address.street')} ? ' is-invalid' : ''"
                        required>
                 <div class="field-error" th:if="${#fields.hasErrors('address.street')}" th:errors="*{address.street}"></div>
@@ -112,6 +118,8 @@
                 <span class="ui-label">Дом</span>
                 <input class="ui-input"
                        th:field="*{address.house}"
+                       pattern="[0-9A-Za-zА-Яа-яЁё\- ]*"
+                       title="Только буквы, цифры и дефис"
                        th:classappend="${#fields.hasErrors('address.house')} ? ' is-invalid' : ''">
                 <div class="field-error" th:if="${#fields.hasErrors('address.house')}" th:errors="*{address.house}"></div>
             </label>
@@ -119,6 +127,8 @@
                 <span class="ui-label">Корпус</span>
                 <input class="ui-input"
                        th:field="*{address.building}"
+                       pattern="[0-9A-Za-zА-Яа-яЁё\- ]*"
+                       title="Только буквы, цифры и дефис"
                        th:classappend="${#fields.hasErrors('address.building')} ? ' is-invalid' : ''">
                 <div class="field-error" th:if="${#fields.hasErrors('address.building')}" th:errors="*{address.building}"></div>
             </label>

@@ -327,17 +327,24 @@ public class EventService {
     }
 
     private String formatMonth(Object dbVal) {
+        ZoneId zone = ZoneId.systemDefault();
         if (dbVal instanceof OffsetDateTime odt) {
-            return odt.getYear() + "-" + String.format("%02d", odt.getMonthValue());
+            return formatYearMonth(odt.atZoneSameInstant(zone).toLocalDate());
         }
         if (dbVal instanceof java.sql.Timestamp ts) {
-            var ldt = ts.toLocalDateTime();
-            return ldt.getYear() + "-" + String.format("%02d", ldt.getMonthValue());
+            return formatYearMonth(ts.toInstant().atZone(zone).toLocalDate());
         }
         if (dbVal instanceof LocalDateTime ldt) {
-            return ldt.getYear() + "-" + String.format("%02d", ldt.getMonthValue());
+            return formatYearMonth(ldt.atZone(zone).toLocalDate());
+        }
+        if (dbVal instanceof LocalDate ld) {
+            return formatYearMonth(ld);
         }
         return String.valueOf(dbVal);
+    }
+
+    private String formatYearMonth(LocalDate date) {
+        return date.getYear() + "-" + String.format("%02d", date.getMonthValue());
     }
     private Range resolveBounds(LocalDate from, LocalDate to) {
         OffsetDateTime fromTs = null;

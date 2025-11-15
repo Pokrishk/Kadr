@@ -85,13 +85,18 @@ public class OrganizerController {
         if (principal != null) {
             var settings = userSettingsService.ensureSettingsForUsername(principal.getUsername());
             var params = request.getParameterMap();
-            var saved = userSettingsService.getSavedFilters(settings, "organizer_stats");
-            if (saved != null) {
-                if (!params.containsKey("from") && saved.hasNonNull("from")) {
-                    from = parseDate(saved.get("from").asText());
-                }
-                if (!params.containsKey("to") && saved.hasNonNull("to")) {
-                    to = parseDate(saved.get("to").asText());
+            boolean resetFilters = params.containsKey("reset");
+            if (resetFilters) {
+                userSettingsService.clearFiltersForUsername(principal.getUsername(), "organizer_stats");
+            } else {
+                var saved = userSettingsService.getSavedFilters(settings, "organizer_stats");
+                if (saved != null) {
+                    if (!params.containsKey("from") && saved.hasNonNull("from")) {
+                        from = parseDate(saved.get("from").asText());
+                    }
+                    if (!params.containsKey("to") && saved.hasNonNull("to")) {
+                        to = parseDate(saved.get("to").asText());
+                    }
                 }
             }
         }
@@ -142,6 +147,7 @@ public class OrganizerController {
                               org.springframework.validation.BindingResult br,
                               Model model,
                               RedirectAttributes ra) {
+        validateEventDateTime(br, form.getEventDateTimeLocal(), null);
         if (form.getEventType() == null || form.getEventType().getId() == null) {
             br.rejectValue("eventType.id", "NotNull", "Выберите тип события");
         }
@@ -209,7 +215,15 @@ public class OrganizerController {
                               org.springframework.validation.BindingResult br,
                               Model model,
                               RedirectAttributes ra) {
-
+        Organizer org = organizerService.getCurrentOrganizerOrThrow();
+        Event existing = eventService.getByIdForOrganizerOrThrow(id, org.getId());
+        LocalDateTime originalDate = null;
+        if (existing.getEventDatetime() != null) {
+            originalDate = existing.getEventDatetime()
+                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+        }
+        validateEventDateTime(br, form.getEventDateTimeLocal(), originalDate);
         if (form.getEventType() == null || form.getEventType().getId() == null) {
             br.rejectValue("eventType.id", "NotNull", "Выберите тип события");
         }
@@ -217,15 +231,13 @@ public class OrganizerController {
             br.rejectValue("tickets", "NotEmpty", "Нужно оставить хотя бы один тип билета");
         }
         if (br.hasErrors()) {
-            Organizer org = organizerService.getCurrentOrganizerOrThrow();
             model.addAttribute("organizer", org);
             model.addAttribute("types", eventTypeRepository.findAll());
             model.addAttribute("mode", "edit");
             model.addAttribute("eventId", id);
             return "organizer-event-form";
         }
-        Organizer org = organizerService.getCurrentOrganizerOrThrow();
-        Event e = eventService.getByIdForOrganizerOrThrow(id, org.getId());
+        Event e = existing;
         var type = eventTypeRepository.findById(form.getEventType().getId()).orElseThrow();
         e.setTitle(form.getTitle());
         e.setDescription(form.getDescription());
@@ -254,6 +266,22 @@ public class OrganizerController {
         eventService.save(e);
         ra.addFlashAttribute("notice", "Событие обновлено");
         return "redirect:/organizer/panel";
+    }
+
+    private void validateEventDateTime(org.springframework.validation.BindingResult br,
+                                       LocalDateTime newDate,
+                                       LocalDateTime originalDate) {
+        if (br.hasFieldErrors("eventDateTimeLocal") || newDate == null) {
+            return;
+        }
+        LocalDateTime normalizedNewDate = newDate.withSecond(0).withNano(0);
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        if (normalizedNewDate.isBefore(now)) {
+            LocalDateTime normalizedOriginal = originalDate == null ? null : originalDate.withSecond(0).withNano(0);
+            if (normalizedOriginal == null || !normalizedNewDate.isEqual(normalizedOriginal)) {
+                br.rejectValue("eventDateTimeLocal", "PastDate", "Дата и время события не могут быть в прошлом");
+            }
+        }
     }
 
     @PostMapping("/events/{id}/delete")
