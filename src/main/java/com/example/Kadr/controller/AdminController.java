@@ -6,15 +6,20 @@ import com.example.Kadr.model.Role;
 import com.example.Kadr.model.User;
 import com.example.Kadr.service.AdminService;
 import com.example.Kadr.service.EventTypeService;
+import com.example.Kadr.service.UserSettingsService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Pageable;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,6 +37,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final EventTypeService eventTypeService;
+    private final UserSettingsService userSettingsService;
 
     @GetMapping
     public String dashboard(Model model) {
@@ -44,9 +50,12 @@ public class AdminController {
     @GetMapping("/organizer-requests")
     public String organizerRequests(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletRequest request,
             Model model
     ) {
-        Page<Organizer> page = adminService.getPendingOrganizerRequests(pageable);
+        Pageable effectivePageable = withUserPageSize(pageable, request, principal);
+        Page<Organizer> page = adminService.getPendingOrganizerRequests(effectivePageable);
         model.addAttribute("page", page);
         return "organizer-requests";
     }
@@ -106,9 +115,12 @@ public class AdminController {
     public String listUsers(
             @RequestParam(value = "q", required = false) String query,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletRequest request,
             Model model
     ) {
-        Page<User> page = adminService.findUsers(query, pageable);
+        Pageable effectivePageable = withUserPageSize(pageable, request, principal);
+        Page<User> page = adminService.findUsers(query, effectivePageable);
         model.addAttribute("page", page);
         model.addAttribute("q", query);
         return "users";
@@ -216,9 +228,12 @@ public class AdminController {
     @GetMapping("/logs")
     public String viewLogs(
             @PageableDefault(size = 30, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletRequest request,
             Model model
     ) {
-        model.addAttribute("page", adminService.getLogs(pageable));
+        Pageable effectivePageable = withUserPageSize(pageable, request, principal);
+        model.addAttribute("page", adminService.getLogs(effectivePageable));
         return "logs";
     }
 
@@ -270,6 +285,19 @@ public class AdminController {
 
     private String flatten(String s) {
         return s == null ? "" : s.replace("\r", " ").replace("\n", " ").trim();
+    }
+
+    private Pageable withUserPageSize(Pageable pageable, HttpServletRequest request, UserDetails principal) {
+        if (principal == null || request.getParameterMap().containsKey("size")) {
+            return pageable;
+        }
+        int preferredSize = userSettingsService
+                .ensureSettingsForUsername(principal.getUsername())
+                .getPageSize();
+        if (preferredSize <= 0) {
+            return pageable;
+        }
+        return PageRequest.of(pageable.getPageNumber(), preferredSize, pageable.getSort());
     }
 
     private void normalizeUser(User user) {

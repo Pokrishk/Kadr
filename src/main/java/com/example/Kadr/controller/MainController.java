@@ -9,6 +9,7 @@ import com.example.Kadr.service.ReviewService;
 import com.example.Kadr.service.UserSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -74,9 +75,21 @@ public class MainController {
     public String listOrganizers(
             @RequestParam(value = "q", required = false) String q,
             @PageableDefault(size = 12, sort = "organizationName", direction = Sort.Direction.ASC) Pageable pageable,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletRequest request,
             Model model
     ) {
-        var page = organizerService.list(q, pageable);
+        Pageable effectivePageable = pageable;
+        if (principal != null && !request.getParameterMap().containsKey("size")) {
+            int preferredSize = userSettingsService
+                    .ensureSettingsForUsername(principal.getUsername())
+                    .getPageSize();
+            if (preferredSize > 0) {
+                effectivePageable = PageRequest.of(pageable.getPageNumber(), preferredSize, pageable.getSort());
+            }
+        }
+
+        var page = organizerService.list(q, effectivePageable);
         model.addAttribute("page", page);
         model.addAttribute("q", q);
         return "organizers";
