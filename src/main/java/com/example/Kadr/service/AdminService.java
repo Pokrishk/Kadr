@@ -122,6 +122,10 @@ public class AdminService {
         Long roleId = form.getRole() != null ? form.getRole().getId() : null;
         Role role = getRoleById(roleId);
 
+        if (isOrganizerRole(role)) {
+            throw new IllegalArgumentException("Нельзя назначить роль организатора без заявки");
+        }
+
         User user = new User();
         user.setUsername(form.getUsername().trim());
         user.setEmail(form.getEmail().trim());
@@ -143,9 +147,16 @@ public class AdminService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
 
+        Role role = getRoleById(form.getRole() != null ? form.getRole().getId() : null);
+        if (isOrganizerRole(role) && !organizerRepository.existsByUser_Id(id)) {
+            throw new IllegalArgumentException(
+                    "Нельзя назначить роль организатора пользователю без заявки организатора"
+            );
+        }
+
         user.setUsername(form.getUsername().trim());
         user.setEmail(form.getEmail().trim());
-        user.setRole(getRoleById(form.getRole() != null ? form.getRole().getId() : null));
+        user.setRole(role);
 
         if (form.getPassword() != null && !form.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(form.getPassword()));
@@ -207,6 +218,11 @@ public class AdminService {
         }
         return roleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Роль не найдена"));
+    }
+
+    private boolean isOrganizerRole(Role role) {
+        return role != null && role.getTitle() != null
+                && ORGANIZER_ROLE_TITLE.equalsIgnoreCase(role.getTitle());
     }
 
     private void validateUser(User user) {
